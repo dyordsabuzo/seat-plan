@@ -1,7 +1,7 @@
 // import initialData from '../initialData';
 // import Boat from "../components/Boat";
 import Papa from "papaparse";
-import { PaddlerType } from "../types/PaddlerType";
+import {PaddlerType} from "../types/PaddlerType";
 
 type BoatData = {
     paddlers: any,
@@ -13,19 +13,31 @@ type BoatData = {
 }
 
 
-
 function getPaddler(data: any) {
     let paddler: PaddlerType = {
         id: null,
+        name: null,
         birthdate: null,
         gender: null,
         weight: null
     }
+
     for (const [key, value] of Object.entries(data)) {
         if (key.toLowerCase() === 'name') {
             let firstname, lastname;
-            [lastname, firstname] = (value as string).split(",");
-            paddler.id = `${firstname.trim()} ${lastname.charAt(0)}`;
+            [lastname, firstname] = (value as string).trim().split(",");
+            paddler.name = `${firstname} ${lastname.charAt(0)}`;
+        } else if (key.toLowerCase() === 'attendee name') {
+            let firstname, lastname;
+            [firstname, lastname] = (value as string).trim().split(" ");
+            paddler.name = `${firstname} ${lastname.charAt(0)}`;
+        } else if (key.toLowerCase() === 'state member id') {
+            paddler.id = (value as string).trim()
+        } else if (key.toLowerCase() === 'first name') {
+            console.log(value)
+            paddler.name = (value as string).trim()
+        } else if (key.toLowerCase() === 'last name') {
+            paddler.name = `${paddler.name}${(value as string).trim().charAt(0)}`
         } else if (key.toLowerCase() === 'date of birth') {
             paddler.birthdate = value as string
         } else if (key.toLowerCase() === 'gender') {

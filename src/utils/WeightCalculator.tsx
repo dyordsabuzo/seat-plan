@@ -1,13 +1,13 @@
-// import paddler from "../components/Paddler";
+import {BoatPosition} from "../enums/BoatConstant";
+
+const frontBackFactor = [
+    6, 4.5, 3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5, -4.5, -6
+];
 
 export function calculateFrontBackBalance(board: any, paddlers: any) {
     if (board === null) {
         return {frontHeavy: false, value: 0, alert: false};
     }
-
-    const frontBackFactor = [
-        6, 4.5, 3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5, -4.5, -6
-    ];
 
     let value: number = 0;
     for (let i = 0, l = frontBackFactor.length; i < l; i++) {
@@ -83,3 +83,95 @@ export function calculateLeftRightBalance(board: any, paddlers: any) {
         womenCount
     };
 }
+
+
+const sideWeightFactor = [
+    // 0,
+    300, 330, 350, 350, 350, 350, 350, 350, 330, 300, 420
+];
+
+export function calculateSideBalance(boat: any, settings: any = {}) {
+    if (boat.length === 1) {
+        return 0;
+    }
+
+    console.log(settings)
+
+    let value = 0;
+
+    const leftPaddlers = boat[BoatPosition.LEFT]
+    const rightPaddlers = boat[BoatPosition.RIGHT]
+
+    const weightFactor = settings.sideWeightFactor ?? sideWeightFactor
+
+
+    for (let i = 0; i < leftPaddlers.length; i++) {
+        const factor = (weightFactor[i] / 350)
+        const leftPaddlerWeight = leftPaddlers[i].weight ?? 0
+        const rightPaddlerWeight = rightPaddlers[i].weight ?? 0
+
+        value += factor * (rightPaddlerWeight - leftPaddlerWeight);
+    }
+
+    // left sweep oar weight offset of 3kg
+    value += (weightFactor[weightFactor.length - 1] / 350) * (-3)
+
+    return {
+        distribution: (value === 0 ? "Balanced" : (value > 0 ? "Right" : "Left") + " heavy"),
+        value: value.toFixed(1),
+        alert: Math.abs(value) > 5,
+        weightTolerance: `minimum -5kg, maximum 5kg`
+    };
+}
+
+export function calculateLineBalance(boat: any, settings: any = {}) {
+    if (boat.length === 1) {
+        return 0;
+    }
+
+    console.log(settings)
+    let value: number = 0;
+
+    // add drum weight of 14kg on drummer weight
+    const defaultDrumWeight = settings.defaultDrumWeight ?? 14
+    const drummerWeight = defaultDrumWeight + (boat[BoatPosition.DRUMMER].weight ?? 0)
+    const weightFactor = settings.lineWeightFactor ?? frontBackFactor
+    value += (weightFactor[0] / 6) * (drummerWeight);
+
+    const leftPaddlers = boat[BoatPosition.LEFT]
+    const rightPaddlers = boat[BoatPosition.RIGHT]
+
+    for (let i = 0; i < leftPaddlers.length; i++) {
+        let weight = 0;
+
+        const leftPaddlerWeight = leftPaddlers[i].weight ?? 0
+        const rightPaddlerWeight = rightPaddlers[i].weight ?? 0
+        weight = rightPaddlerWeight + leftPaddlerWeight;
+
+        value += (weightFactor[i + 1] / 6) * (weight);
+    }
+
+    // add sweep oar weight of 7kg on sweep weight
+    const defaultSweepWeight = settings.defaultSweepWeight ?? 7
+    const sweepWeight = defaultSweepWeight + (boat[BoatPosition.SWEEP].weight ?? 0)
+    value += (weightFactor[weightFactor.length - 1] / 6) * (sweepWeight);
+
+    // positive is front heavy, alert if > 15 or < -25
+    return {
+        distribution: (value === 0 ? "Balanced" : (value > 0 ? "Front" : "Back") + " heavy"),
+        value: value.toFixed(1),
+        alert: value > 15 || value < -25,
+        weightTolerance: `minimum -25kg, maximum 15kg`
+    };
+}
+
+export function calculateBalance(boat: any) {
+    const sideBalance = calculateSideBalance(boat);
+    const lineBalance = calculateLineBalance(boat);
+
+    return {
+        ...sideBalance,
+        ...lineBalance
+    }
+}
+

@@ -1,12 +1,12 @@
 import {useSetupState} from "../../../context/SetupContext";
 import {Controller, useForm} from "react-hook-form";
-import {Link, useNavigate} from "react-router-dom";
-import {useContext, useState} from "react";
-import BoatContext from "../../../context/BoatContext";
+import {useNavigate} from "react-router-dom";
+// import {useContext, useState} from "react";
+// import BoatContext from "../../../context/BoatContext";
 import {processFile} from "../../../utils/DataBuilder";
 
 export default function PaddlerListUpload() {
-    const boatContext = useContext(BoatContext);
+    // const boatContext = useContext(BoatContext);
     const [state, setState] = useSetupState()
     // const [elements, setElements] = useState(defaults)
 

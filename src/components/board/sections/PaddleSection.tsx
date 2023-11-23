@@ -1,6 +1,6 @@
-import {BoatPosition} from "../../../enums/BoatConstant";
+// import {BoatPosition} from "../../../enums/BoatConstant";
 import React from "react";
-import DroppableSection from "../../complex/drag-and-drop/DroppableSection";
+// import DroppableSection from "../../complex/drag-and-drop/DroppableSection";
 import {LeftPaddleSection} from "./LeftPaddleSection";
 import {RightPaddleSection} from "./RightPaddleSection";
 

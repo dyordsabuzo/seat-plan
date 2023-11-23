@@ -1,7 +1,7 @@
 import {Draggable} from "react-beautiful-dnd";
 import React from "react";
 import {LabelWidget} from "../widgets/LabelWidget";
-import {BoatLabel} from "../../../enums/BoatConstant";
+// import {BoatLabel} from "../../../enums/BoatConstant";
 
 type Props = {
     item: any

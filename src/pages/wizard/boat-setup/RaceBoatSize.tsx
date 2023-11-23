@@ -8,7 +8,8 @@ export default function RaceBoatSize() {
 
     return (
         <BaseWidget fieldName={"boatType"} label={"Select boat size to setup"}
-                    navigateTo={"/seat-plan/paddlers"} navigateFrom={"/seat-plan/distance"}
+                    navigateTo={"/paddlers"}
+                    navigateFrom={"/distance"}
                     defaults={categories}/>
     )
 }

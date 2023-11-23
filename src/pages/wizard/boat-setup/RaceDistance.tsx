@@ -10,7 +10,8 @@ export default function RaceDistance() {
 
     return (
         <BaseWidget fieldName={"distance"} label={"Select race distances"}
-                    navigateTo={"/seat-plan/boat"} navigateFrom={"/seat-plan/type"}
+                    navigateTo={"/boat"}
+                    navigateFrom={"/type"}
                     defaults={defaults}/>
     )
 }

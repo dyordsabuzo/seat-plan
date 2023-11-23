@@ -159,7 +159,7 @@ export function SetupBoard() {
                 <div className={`flex flex-col items-center`}>
                     <span>Loading</span>
                     <button className={`bg-teal-200 ring-1 p-2`} onClick={() => {
-                        navigate('/seat-plan')
+                        navigate('/')
                     }}>Cancel
                     </button>
                 </div>

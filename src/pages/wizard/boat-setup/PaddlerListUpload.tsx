@@ -35,7 +35,7 @@ export default function PaddlerListUpload() {
                 paddlers: Object.keys(paddlers).map(key => paddlers[key])
             })
         }
-        navigate("/seat-plan/setupboard");
+        navigate("/setupboard");
     };
 
     return (

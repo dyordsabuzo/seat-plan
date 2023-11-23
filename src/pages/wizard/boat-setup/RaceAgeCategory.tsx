@@ -9,7 +9,7 @@ export default function RaceAgeCategory() {
 
     return (
         <BaseWidget fieldName={"categories"} label={"Select race categories to setup"}
-                    navigateTo={"/seat-plan/type"}
+                    navigateTo={"/type"}
                     defaults={categories}/>
     )
 }

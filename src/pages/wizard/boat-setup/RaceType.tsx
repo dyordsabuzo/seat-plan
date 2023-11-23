@@ -9,7 +9,8 @@ export default function RaceType() {
 
     return (
         <BaseWidget fieldName={"types"} label={"Select race types"}
-                    navigateTo={"/seat-plan/distance"} navigateFrom={"/seat-plan/category"}
+                    navigateTo={"/distance"}
+                    navigateFrom={"/category"}
                     defaults={defaults}/>
     )
 }

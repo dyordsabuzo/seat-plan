@@ -14,6 +14,7 @@ import RaceDistance from "./pages/wizard/boat-setup/RaceDistance";
 import RaceBoatSize from "./pages/wizard/boat-setup/RaceBoatSize";
 import PaddlerListUpload from "./pages/wizard/boat-setup/PaddlerListUpload";
 import SetupBoard from "./pages/wizard/boat-setup/SetupBoard";
+import SetupHome from "./pages/SetupHome";
 
 // import Sample from "./components/drag-and-drop/Sample";
 
@@ -29,7 +30,18 @@ function App() {
             <BrowserRouter>
                 <Routes>
                     <Route path="/" element={<Outlet/>}>
-                        <Route index element={<RaceAgeCategory/>}/>
+                        <Route index element={<SetupHome/>}/>
+                        <Route path="category" element={<RaceAgeCategory/>}/>
+                        <Route path="type" element={<RaceType/>}/>
+                        <Route path="distance" element={<RaceDistance/>}/>
+                        <Route path="boat" element={<RaceBoatSize/>}/>
+                        <Route path="paddlers" element={<PaddlerListUpload/>}/>
+                        <Route path="setupboard" element={<SetupBoard/>}/>
+                    </Route>
+
+                    {/* Backwards-compatible entrypoint: /seat-plan */}
+                    <Route path="/seat-plan" element={<Outlet/>}>
+                        <Route index element={<SetupHome/>}/>
                         <Route path="category" element={<RaceAgeCategory/>}/>
                         <Route path="type" element={<RaceType/>}/>
                         <Route path="distance" element={<RaceDistance/>}/>

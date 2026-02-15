@@ -23,10 +23,11 @@ const initialiseBoard = (paddlers: any, boatType) => {
 type Props = {
     boardConfigs: any
     boardProperties: any
-    onUpdateConfig?: (index, config) => void
+        onUpdateConfig?: (index, config) => void
+        onAddPaddler?: (paddler: any) => void
 }
 
-export default function MainBoard({boardConfigs, boardProperties, onUpdateConfig}: Props) {
+export default function MainBoard({boardConfigs, boardProperties, onUpdateConfig, onAddPaddler}: Props) {
     // const [state, setState] = useSetupState()
     const [selectedConfig, setSelectedConfig] = useState(0)
     const [boardSetup, setBoardSetup] = useState<any>([])
@@ -135,7 +136,7 @@ export default function MainBoard({boardConfigs, boardProperties, onUpdateConfig
             />
             <DragDropContext onDragEnd={onDragEnd}>
                 <div className={`flex items-start`}>
-                    <ReserveSection section={boardSetup[BoatPosition.RESERVE]}/>
+                    <ReserveSection section={boardSetup[BoatPosition.RESERVE]} onAddPaddler={onAddPaddler} />
                     <ConfigSection drummerSection={boardSetup[BoatPosition.DRUMMER]}
                                    leftSection={boardSetup[BoatPosition.LEFT]}
                                    rightSection={boardSetup[BoatPosition.RIGHT]}

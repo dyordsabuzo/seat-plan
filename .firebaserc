@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "training-planner-387200"
-  }
+    "default": "seat-plan-21f87"
+  },
+  "targets": {},
+  "etags": {}
 }

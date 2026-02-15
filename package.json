@@ -38,7 +38,8 @@
     "sentry:sourcemaps": "sentry-cli sourcemaps inject --org dyords --project seat-plan ./build && sentry-cli sourcemaps upload --org dyords --project seat-plan ./build",
     "fblogin": "firebase login",
     "fbinit": "firebase init",
-    "fbdeploy": "firebase deploy"
+    "fbdeploy": "firebase deploy",
+    "fb": "firebase"
   },
   "eslintConfig": {
     "extends": [

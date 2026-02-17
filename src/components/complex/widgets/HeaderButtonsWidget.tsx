@@ -10,7 +10,7 @@ type Props = {
 
 export function HeaderButtonsWidget({names, clickedIndex = 0, onClick, addHeaderHandler}: Props) {
     return (
-        <div className={`w-full flex py-4 gap-2`}>
+        <div className={`w-full flex py-4 pb-8 gap-2`}>
             {names.map((name, index) => (
                 <HeaderButton key={index}
                               label={name}

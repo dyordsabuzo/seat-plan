@@ -24,9 +24,10 @@ function getPaddler(data: any) {
 
     for (const [key, value] of Object.entries(data)) {
         if (key.toLowerCase() === 'name') {
-            let firstname, lastname;
-            [lastname, firstname] = (value as string).trim().split(",");
-            paddler.name = `${firstname} ${lastname.charAt(0)}`;
+            // let firstname, lastname;
+            // [lastname, firstname] = (value as string).trim().split(",");
+            // paddler.name = `${firstname} ${lastname.charAt(0)}`;
+            paddler.name = (value as string).trim();
         } else if (key.toLowerCase() === 'attendee name') {
             let firstname, lastname;
             [firstname, lastname] = (value as string).trim().split(" ");
@@ -42,7 +43,7 @@ function getPaddler(data: any) {
             paddler.birthdate = value as string
         } else if (key.toLowerCase() === 'gender') {
             paddler.gender = value as string
-        } else if (key.toLowerCase() === 'current weight (in kgs)') {
+        } else if (key.toLowerCase().includes('weight')) {
             let weight = (value as string).replace("kg", "").replace("s", "").trim() || "60";
             paddler.weight = parseInt(weight);
         }
@@ -57,11 +58,12 @@ export function processFile(file: File) {
             skipEmptyLines: true,
             complete: function (results) {
                 let paddlers = {};
+
                 results.data.forEach((d) => {
                     const paddler = getPaddler(d);
                     paddlers = {
                         ...paddlers,
-                        [paddler.id as string]: paddler
+                        [paddler.name as string]: paddler
                     };
                 });
                 resolve(paddlers);

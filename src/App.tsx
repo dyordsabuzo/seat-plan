@@ -7,14 +7,16 @@
 // import {BoatContextProvider} from './context/BoatContext';
 // import SetupPage from "./pages/SetupPage";
 import {SetupProvider} from "./context/SetupContext";
+import {RegattaProvider} from "./context/RegattaContext";
 import {BrowserRouter, Outlet, Route, Routes} from "react-router-dom";
 import RaceAgeCategory from "./pages/wizard/boat-setup/RaceAgeCategory";
 import RaceType from "./pages/wizard/boat-setup/RaceType";
 import RaceDistance from "./pages/wizard/boat-setup/RaceDistance";
 import RaceBoatSize from "./pages/wizard/boat-setup/RaceBoatSize";
 import PaddlerListUpload from "./pages/wizard/boat-setup/PaddlerListUpload";
-import SetupBoard from "./pages/wizard/boat-setup/SetupBoard";
+import SetupBoard from "./pages/SetupBoard";
 import SetupHome from "./pages/SetupHome";
+import Manage from "./pages/regatta/Manage";
 
 // import Sample from "./components/drag-and-drop/Sample";
 
@@ -27,10 +29,12 @@ function App() {
         //     </BoatContextProvider>
         // </div>
         <SetupProvider>
+            <RegattaProvider>
             <BrowserRouter>
                 <Routes>
                     <Route path="/" element={<Outlet/>}>
                         <Route index element={<SetupHome/>}/>
+                        <Route path="manage" element={<Manage/>}/>
                         <Route path="category" element={<RaceAgeCategory/>}/>
                         <Route path="type" element={<RaceType/>}/>
                         <Route path="distance" element={<RaceDistance/>}/>
@@ -42,6 +46,7 @@ function App() {
                     {/* Backwards-compatible entrypoint: /seat-plan */}
                     <Route path="/seat-plan" element={<Outlet/>}>
                         <Route index element={<SetupHome/>}/>
+                        <Route path="manage" element={<Manage/>}/>
                         <Route path="category" element={<RaceAgeCategory/>}/>
                         <Route path="type" element={<RaceType/>}/>
                         <Route path="distance" element={<RaceDistance/>}/>
@@ -51,6 +56,7 @@ function App() {
                     </Route>
                 </Routes>
             </BrowserRouter>
+            </RegattaProvider>
         </SetupProvider>
     );
 }

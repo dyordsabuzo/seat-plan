@@ -34,7 +34,7 @@ const CreateRaceModal: React.FC<Props> = ({open, onClose, onCreate}) => {
                             </div>
 
                             <div>
-                                <label className={`block text-sm font-medium`}>Race name</label>
+                                <label className={`block text-sm font-medium`}>Regatta name</label>
                                 <input value={name} onChange={e => setName(e.target.value)} className={`mt-2 block w-full border rounded px-3 py-2`} />
                             </div>
 

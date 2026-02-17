@@ -1,3 +1,4 @@
+import { useLocation } from "react-router";
 import BaseWidget from "./BaseWidget";
 
 export default function RaceType() {
@@ -7,10 +8,13 @@ export default function RaceType() {
         "Mixed": false,
     }
 
+    const location = useLocation();
+    const {next = "/distance", from = "/category"} = location.state || {};
+
     return (
         <BaseWidget fieldName={"types"} label={"Select race types"}
-                    navigateTo={"/distance"}
-                    navigateFrom={"/category"}
+                    navigateTo={next}
+                    navigateFrom={from}
                     defaults={defaults}/>
     )
 }

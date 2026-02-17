@@ -3,12 +3,18 @@ import {useForm} from "react-hook-form";
 import {Link, useNavigate} from "react-router-dom";
 import {useState} from "react";
 import {SelectionButton} from "../../../components/basic/buttons/SelectionButton";
+import { useRegattaState } from "../../../context/RegattaContext";
+import { logger } from "../../../common/helpers/logger";
+import { last } from "cypress/types/lodash";
+import { Race } from "../../../types/RegattaType";
 
 export default function BaseWidget({
                                        children = null, fieldName, defaults, navigateTo,
                                        navigateFrom = "", label, lastPage = false
                                    }) {
-    const [state, setState] = useSetupState()
+    const {state, setState} = useSetupState()
+    const [regatta, setRegatta] = useRegattaState()
+
     const [elements, setElements] = useState(defaults)
 
     const {
@@ -20,30 +26,62 @@ export default function BaseWidget({
     const navigate = useNavigate()
 
     const saveData = (data: any) => {
-        const fieldElements = data[fieldName].split(",")
+        logger.debug("Saving data for field", fieldName, "with data", data);
 
-        let raceList = fieldElements
-        if (state.raceList) {
-            raceList = state.raceList.map((tab: string) => fieldElements.map((item: string) => `${tab}-${item}`)).flat()
-        } else {
-            navigate('/seat-plan')
+        const fieldElements = data[fieldName].split(",");
+
+        switch(fieldName) {
+            case "categories":
+                regatta.categories = fieldElements;
+                break;
+            case "types":
+                regatta.types = fieldElements;
+                break;
+            case "distance":
+                regatta.distances = fieldElements;
+                break;
+            case "boatType":
+                regatta.boatTypes = fieldElements;
+                break;
         }
 
-        let configs = {}
-        raceList.forEach((item: string) => {
-            configs[item] = {
-                paddlers: [],
-                configs: []
-            }
-        })
+        logger.debug("Regatta state after saving", regatta, lastPage, navigateTo);
+        if (lastPage) {
+            const races: Race[] = [];
 
-        setState({
-            ...state,
-            ...data,
-            raceList,
-            configs
-        });
+            let id = 0;
+            regatta.categories.forEach((category: string) => {
+                regatta.types.forEach((type: string) => {
+                    regatta.distances.forEach((distance: string) => {
+                        regatta.boatTypes.forEach((boatType: string) => {
+                            races.push({
+                                id: `${id++}`,
+                                category,
+                                type,
+                                distance,
+                                boatType,
+                                configs: []
+                            });
+                        })
+                    })
+                })
+            });
+
+            logger.debug("Generated races", races);
+
+            regatta.races = races;
+            const regattaConfigs = localStorage.getItem('regattaConfigs');
+
+            localStorage.setItem('regattaConfigs', JSON.stringify({
+                ...JSON.parse(regattaConfigs || '{}'),
+                [regatta.name]: regatta
+            }));
+
+            logger.debug("Regatta state after config setup", regatta);
+        }
+
         navigate(navigateTo);
+
     };
 
     return (
@@ -81,7 +119,7 @@ export default function BaseWidget({
                         `} to={navigateFrom}>
                                 {"<"} Back
                             </Link>)}
-                            <button className={`
+                            <button type="submit" className={`
                             absolute right-0
                             text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none 
                             focus:ring-cyan-300 dark:focus:ring-cyan-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2

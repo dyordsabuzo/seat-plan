@@ -5,7 +5,8 @@ export const getItems = (count: number, offset = 0, label: string) =>
     Array.from({length: count}, (v, k) => k).map(k => ({
             id: `${label}-${k + offset}-${new Date().getTime()}`,
             // content: `${label} ${k + offset}`,
-            content: 'Empty Seat'
+            content: 'Empty Seat',
+            weight: 0
         })
     );
 

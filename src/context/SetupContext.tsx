@@ -1,4 +1,6 @@
 import {createContext, useContext, useState} from "react";
+import { calculateBalance, calculateLineBalance, calculateSideBalance } from "../utils/WeightCalculator";
+import Boat from "../refactor/boat/Boat";
 
 export const SetupStateContext = createContext({})
 
@@ -18,9 +20,30 @@ const setDefaultSettings = () => {
 }
 
 export function SetupProvider({children}) {
-    const value = useState({
+    const [state, setState] = useState({
         settings: setDefaultSettings(),
     })
+
+    const setWeightFactor = (boatType: string) => {
+        return {
+            sideWeightFactor: state.settings?.sideWeightFactor[boatType.toUpperCase()],
+            lineWeightFactor: state.settings?.lineWeightFactor[boatType.toUpperCase()]
+        }
+    }
+
+    const checkBoatBalance = (boardSetup: any, boatType: string) => {
+        const settings = {
+            ...state.settings,
+            ...setWeightFactor(boatType)
+        }
+        
+        const sideBalance = calculateSideBalance(boardSetup, settings)
+        const lineBalance = calculateLineBalance(boardSetup, settings)
+
+        return {sideBalance, lineBalance};
+    }
+
+    const value: any = { setting: state, setSetting: setState, checkBoatBalance };
 
     return (
         <SetupStateContext.Provider value={value}>

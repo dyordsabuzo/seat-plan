@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import BaseWidget from "./BaseWidget";
 
 export default function RaceBoatSize() {
@@ -6,10 +7,15 @@ export default function RaceBoatSize() {
         "Small": false,
     }
 
+    const location = useLocation();
+    const {next = "/setupboard", from = "/distance"} = location.state || {};    
+
     return (
         <BaseWidget fieldName={"boatType"} label={"Select boat size to setup"}
-                    navigateTo={"/paddlers"}
-                    navigateFrom={"/distance"}
-                    defaults={categories}/>
-    )
+                    navigateTo={next}
+                    navigateFrom={from}
+                    defaults={categories}
+                    lastPage={next === "/setupboard"}
+        />
+    );
 }

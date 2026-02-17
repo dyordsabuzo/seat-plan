@@ -5,7 +5,7 @@ import RaceType from "./wizard/boat-setup/RaceType";
 import RaceDistance from "./wizard/boat-setup/RaceDistance";
 import RaceBoatSize from "./wizard/boat-setup/RaceBoatSize";
 import PaddlerListUpload from "./wizard/boat-setup/PaddlerListUpload";
-import SetupBoard from "./wizard/boat-setup/SetupBoard";
+import SetupBoard from "./SetupBoard";
 
 export default function SetupPage() {
     return (

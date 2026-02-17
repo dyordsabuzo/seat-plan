@@ -1,3 +1,4 @@
+import { logger } from "../common/helpers/logger";
 import {BoatPosition} from "../enums/BoatConstant";
 
 const frontBackFactor = [
@@ -95,7 +96,7 @@ export function calculateSideBalance(boat: any, settings: any = {}) {
         return 0;
     }
 
-    console.log(settings)
+    logger.debug("Calculating side balance", {boat, settings});
 
     let value = 0;
 
@@ -110,8 +111,11 @@ export function calculateSideBalance(boat: any, settings: any = {}) {
         const leftPaddlerWeight = leftPaddlers[i].weight ?? 0
         const rightPaddlerWeight = rightPaddlers[i].weight ?? 0
 
+        logger.debug("Calculating side balance", {boat, settings, leftPaddlerWeight, rightPaddlerWeight, factor});
         value += factor * (rightPaddlerWeight - leftPaddlerWeight);
     }
+
+    logger.debug("Value after calculating paddlers", value);
 
     // left sweep oar weight offset of 3kg
     value += (weightFactor[weightFactor.length - 1] / 350) * (-3)
@@ -129,7 +133,7 @@ export function calculateLineBalance(boat: any, settings: any = {}) {
         return 0;
     }
 
-    console.log(settings)
+    logger.debug("Calculating line balance", {boat, settings});
     let value: number = 0;
 
     // add drum weight of 14kg on drummer weight

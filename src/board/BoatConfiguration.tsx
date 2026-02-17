@@ -102,7 +102,8 @@ export default function BoatConfiguration() {
 
         newState[positionId].splice(index, 0, {
             id: `empty-${index}-${new Date().getTime()}`,
-            content: 'Empty Seat'
+            content: 'Empty Seat',
+            weight: 0
         })
 
         newState[BoatPosition.RESERVE].splice(0, 0, object)

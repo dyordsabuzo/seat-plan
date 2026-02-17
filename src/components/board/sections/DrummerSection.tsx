@@ -1,3 +1,4 @@
+import { logger } from "../../../common/helpers/logger";
 import {BoatLabel, BoatPosition} from "../../../enums/BoatConstant";
 import DroppableSection from "../../complex/drag-and-drop/DroppableSection";
 
@@ -7,6 +8,7 @@ type Props = {
 }
 
 export function DrummerSection({section, onButtonClick = null}: Props) {
+    logger.debug("Rendering DrummerSection with section", section)
     return (
         <div className={`flex flex-col items-center gap-2`}>
             <DroppableSection section={section}

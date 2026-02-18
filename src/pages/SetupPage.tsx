@@ -1,10 +1,10 @@
 import {BrowserRouter, Routes, Route, Outlet} from "react-router-dom";
 import {SetupProvider} from "../context/SetupContext";
-import RaceAgeCategory from "./wizard/boat-setup/RaceAgeCategory";
-import RaceType from "./wizard/boat-setup/RaceType";
-import RaceDistance from "./wizard/boat-setup/RaceDistance";
-import RaceBoatSize from "./wizard/boat-setup/RaceBoatSize";
-import PaddlerListUpload from "./wizard/boat-setup/PaddlerListUpload";
+import RaceAgeCategory from "./wizard/RaceAgeCategory";
+import RaceType from "./wizard/RaceType";
+import RaceDistance from "./wizard/RaceDistance";
+import RaceBoatSize from "./wizard/RaceBoatSize";
+import PaddlerListUpload from "./wizard/PaddlerListUpload";
 import SetupBoard from "./SetupBoard";
 
 export default function SetupPage() {

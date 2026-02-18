@@ -1,18 +1,14 @@
-import React, {useEffect, useState} from "react";
-import {DragDropContext} from "react-beautiful-dnd";
-import {BoatLabel, BoatPosition, BoatSize} from "../../enums/BoatConstant";
+import { useEffect, useState } from "react";
+import { DragDropContext } from "react-beautiful-dnd";
+import { BoatLabel, BoatPosition, BoatSize } from "../../enums/BoatConstant";
 // import {calculateLineBalance, calculateSideBalance} from "../../utils/WeightCalculator";
-import {getItems, move, reorder} from "../../utils/ConfigurationHelper";
-import {ReserveSection} from "./sections/ReserveSection";
-import ConfigSection from "./ConfigSection";
-import {HeaderButtonsWidget} from "../complex/widgets/HeaderButtonsWidget";
-import {useRegattaState} from '../../context/RegattaContext'
 import { logger } from "../../common/helpers/logger";
-import { BasicButton } from "../basic/buttons/BasIcButton";
-import { SelectionButton } from "../basic/buttons/SelectionButton";
-import { useSetupState } from "../../context/SetupContext";
-import { calculateLineBalance, calculateSideBalance } from "../../utils/WeightCalculator";
+import { useRegattaState } from '../../context/RegattaContext';
 import { Race } from "../../types/RegattaType";
+import { getItems, move, reorder } from "../../utils/ConfigurationHelper";
+import { HeaderButtonsWidget } from "../complex/widgets/HeaderButtonsWidget";
+import ConfigSection from "./ConfigSection";
+import { ReserveSection } from "./sections/ReserveSection";
 
 const initialiseBoard = (paddlers: any, boatType) => {
     const boatSize = BoatSize[boatType.toUpperCase()]
@@ -36,31 +32,48 @@ type Props = {
 
 export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedRace}: Props) {
     const [selectedConfigIndex, setSelectedConfigIndex] = useState(null)
-    const [configNames, setConfigNames] = useState<string[]>(["Default Config"])
+    const [configNames, setConfigNames] = useState<string[]>(race.configs.length < 2 ? ["Config 1"] : race.configs.map((_, index) => `Config ${index + 1}`))
     const [boardSetup, setBoardSetup] = useState<any>(null)
-    const {setting, setSetting} = useSetupState();
+    // const [showWeights, setShowWeights] = useState(true)
+    // const {setting, setSetting} = useSetupState();
+
+    const {updateRaceConfig} = useRegattaState()
 
     useEffect(() => {
         setSelectedConfigIndex(null);
+        setConfigNames(race.configs.length === 0 ? ["Config 1"] : race.configs.map((_, index) => `Config ${index + 1}`));
         return () => {};
     }, [race]);
+    
+    useEffect(() => {
+        logger.debug("PRE Board setup changed", boardSetup, selectedConfigIndex, race);
+        race.configs[selectedConfigIndex] = boardSetup;
+        updateRaceConfig(race);
+        logger.debug("POST Board setup changed", boardSetup, selectedConfigIndex, race);
+        return () => {};
+    // eslint-disable-next-line 
+    }, [boardSetup]);
+
+    const paintRaceConfig = (configIndex: number) => {
+        if (race.configs.length < 1) {
+            logger.debug("Empty race configurations", race.configs, configIndex)
+            const config = initialiseBoard(race.paddlers.map((p: any) => {
+                // const content = showWeights ? `${p.name} (${p.weight})` : p.name
+                const content = `${p.name} (${p.weight})`;
+                return {...p, content: content}
+            }), race.boatType)
+            race.configs = [config];
+            logger.debug("Updated race configurations", race.configs)
+        }
+    }
 
     useEffect(() => {
         if (selectedConfigIndex !== null) {
-            logger.debug("Selected config index changed", selectedConfigIndex, race)
-            if (race.configs.length > 0) {
-                logger.debug("Race configurations", race.configs)
-                if (selectedConfigIndex <= race.configs.length - 1) {
-                    const config = initialiseBoard(race.paddlers.map((p: any) => ({...p, content: `${p.name} (${p.weight})`})), race.boatType);
-                    race.configs.push(config);
-                }
-            } else {
-                const config = initialiseBoard(race.paddlers.map((p: any) => ({...p, content: `${p.name} (${p.weight})`})), race.boatType)
-                race.configs = [config];
-            }
-            logger.debug("Updated race configurations", race.configs)
+            logger.debug("Selected config index changed", selectedConfigIndex, race)            
+            paintRaceConfig(selectedConfigIndex);
         }
         setBoardSetup(race.configs[selectedConfigIndex]);
+    // eslint-disable-next-line 
     }, [selectedConfigIndex]);
 
     const onDragEnd = (result: any) => {
@@ -97,28 +110,6 @@ export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedR
         }
     }
 
-    // useEffect(() => {
-    //     if (selectedConfigIndex !== null) {
-    //         // const settings = {
-    //         //     ...state.settings,
-    //         //     sideWeightFactor: state.settings?.sideWeightFactor[state.boatSize?.toUpperCase()],
-    //         //     lineWeightFactor: state.settings?.lineWeightFactor[state.boatSize?.toUpperCase()]
-    //         // }
-    
-    //         logger.debug("Calculating balance with settings", boardSetup, setting)
-    //         const sideBalance = calculateSideBalance(boardSetup, setting)
-    //         const lineBalance = calculateLineBalance(boardSetup, setting)
-    
-    //         // setStats({
-    //         //     sideBalance,
-    //         //     lineBalance
-    //         // });
-    //         logger.debug("Calculated balance", {sideBalance, lineBalance})
-    //     }
-    //     return () => {
-    //     }
-    // }, [boardSetup]);
-
     const putOnReserve = (object: any, positionId: number, index: number) => {
         const newState = [...boardSetup];
         newState[positionId].splice(index, 1);
@@ -132,15 +123,28 @@ export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedR
         setBoardSetup(newState)
     }
 
-    logger.debug("Board setup for config", selectedConfigIndex, boardSetup, race);
-
     return (
         <div className={`flex flex-col`}>
             <div className="flex items-center gap-4 mt-4">
                 <span className={`text-sm text-gray-800`}>
                     {`${race.category} ${race.type} ${race.distance} ${race.boatType}`}
                 </span>
-                <button className={`text-sm text-blue-500 border border-blue-500 rounded px-2 py-1`}>Save</button>
+                <button onClick={() => {
+                    // Save logic here
+                }} className={`text-sm text-blue-500 border border-blue-500 rounded px-2 py-1`}>Save</button>
+                <button onClick={() => {
+                    race.configs = [];
+                    setSelectedConfigIndex(null);
+                }}
+                className={`text-sm text-blue-500 border border-blue-500 rounded px-2 py-1`}>Reset configs</button>
+                {/* <label className="flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={showWeights}
+                        onChange={e => setShowWeights(e.target.checked)}
+                    />
+                    <span className="text-sm text-gray-800">Show Weights</span>
+                </label> */}
             </div>
 
             <HeaderButtonsWidget names={configNames}

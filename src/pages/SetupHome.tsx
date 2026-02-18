@@ -1,202 +1,139 @@
-import React, {useEffect, useState} from 'react';
-import {useNavigate} from 'react-router-dom';
-import {useSetupState} from '../context/SetupContext';
-import {useRegattaState} from '../context/RegattaContext';
-import {ListWidget} from '../components/complex/widgets/ListWidget';
-import CreateRaceModal from '../components/complex/modals/CreateRaceModal';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+// import {useSetupState} from '../context/SetupContext';
 import { logger } from '../common/helpers/logger';
-import { Race } from '../types/RegattaType';
+import CreateRegattaModal from '../components/complex/modals/CreateRegattaModal';
+import { ListWidget } from '../components/complex/widgets/ListWidget';
+import { useRegattaState } from '../context/RegattaContext';
+import { Regatta } from '../types/RegattaType';
 
 export default function SetupHome() {
-    // const [state, setState] = useSetupState()
-    const [regatta, setRegattaState] = useRegattaState()
-    const [regattaConfigs, setRegattaConfigs] = useState<Race[]>([]);
+    const [allRegattas, setAllRegattas] = useState<Record<string, Regatta> | null>(null)
+    const [selectedRegatta, setSelectedRegatta] = useState<string | null>(null);
+    const {state: regatta, setState: setRegattaState} = useRegattaState()
 
-    const [regattaList, setRegattaList] = useState<string[]>([])
+
+    // const [races, setRaces] = useState<Race[]>([]);
     const [createOpen, setCreateOpen] = useState(false)
-
     const navigate = useNavigate()
 
-    // // Helpers to convert between nested tree and flat configs
-    // const buildTreeFromSelections = (name: string, categories: string[], types: string[], distances: string[], boats: string[]) => {
-    //     // tree: { name: [ { category: [ { type: [ { distance: [ { boat: { paddlers, configs } } ] } ] } ] } ] ] }
-    //     const categoryNodes = categories.map(cat => {
-    //         const typeNodes = types.map(t => {
-    //             const distanceNodes = distances.map(d => {
-    //                 const boatNodeArr = boats.map(b => ({ [b]: { paddlers: {}, configs: [] } }))
-    //                 return { [d]: boatNodeArr }
-    //             })
-    //             return { [t]: distanceNodes }
-    //         })
-    //         return { [cat]: typeNodes }
-    //     })
-
-    //     return { [name]: categoryNodes }
-    // }
-
-    // const buildFlatFromTree = (tree: any) => {
-    //     const flat: any = {}
-    //     Object.keys(tree).forEach((raceName) => {
-    //         const categories = tree[raceName]
-    //         if (!Array.isArray(categories)) return
-    //         categories.forEach((catObj: any) => {
-    //             const cat = Object.keys(catObj)[0]
-    //             const types = catObj[cat]
-    //             types.forEach((typeObj: any) => {
-    //                 const type = Object.keys(typeObj)[0]
-    //                 const distances = typeObj[type]
-    //                 distances.forEach((distObj: any) => {
-    //                     const dist = Object.keys(distObj)[0]
-    //                     const boats = distObj[dist]
-    //                     boats.forEach((boatObj: any) => {
-    //                         const boat = Object.keys(boatObj)[0]
-    //                         const value = boatObj[boat]
-    //                         const key = `${cat}-${type}-${dist}-${boat}`
-    //                         flat[key] = {
-    //                             ...(value || {paddlers: {}, configs: []}),
-    //                             _meta: { raceName, category: cat, type, distance: dist, boatType: boat }
-    //                         }
-    //                     })
-    //                 })
-    //             })
-    //         })
-    //     })
-    //     return flat
-    // }
+    useEffect(() => {
+        if (!allRegattas) {
+            logger.debug("Attempting to load regatta configs from localStorage");
+            try {
+                const raw = localStorage.getItem('regattaConfigs')
+                if (raw) {
+                    const tree = JSON.parse(raw)
+                    setAllRegattas(tree);
+                }
+            } catch (err) {
+                logger.debug('no local races', err)
+            }
+        }
+        return () => {}
+    // eslint-disable-next-line
+    }, []);
 
     useEffect(() => {
-        // First, load any cached races from localStorage so the UI shows immediately
-        try {
-            // const raw = localStorage.getItem('seatplan.races')
-            const raw = localStorage.getItem('regattaConfigs')
-            if (raw) {
-                const tree = JSON.parse(raw)
-                setRegattaConfigs(tree);
-            }
-        } catch (err) {
-            logger.debug('no local races', err)
+        if (selectedRegatta) {
+            logger.debug("Selected regatta", selectedRegatta, "with configs", allRegattas?.[selectedRegatta]);
+            setRegattaState(allRegattas?.[selectedRegatta] || { name: selectedRegatta, paddlers: {}, configs: [] });
         }
-
-        // Then attempt to refresh from backend; if available overwrite the cache and state
-        const loadRaces = async () => {
-            try {
-                const res = await fetch('/api/races')
-                if (!res.ok) throw new Error('no backend')
-                const data = await res.json()
-                if (Array.isArray(data.races)) {
-                    // backend returns array of {name, configTree}
-                    const tree: any = {}
-                    data.races.forEach((r: any) => {
-                        tree[r.name] = r.config || {paddlers: {}, configs: []}
-                    })
-                    // const flat = buildFlatFromTree(tree)
-                    // const raceList = Object.keys(flat)
-                    // setState(prev => ({...prev, raceList, configs: flat, configTree: tree}))
-                    try { localStorage.setItem('seatplan.races', JSON.stringify(tree)) } catch (_) {}
-                } else if (data && typeof data === 'object') {
-                    // assume backend returned a nested tree
-                    const tree: any = data
-                    // const flat = buildFlatFromTree(tree)
-                    // const raceList = Object.keys(flat)
-                    // setState(prev => ({...prev, raceList, configs: flat, configTree: tree}))
-                    try { localStorage.setItem('seatplan.races', JSON.stringify(tree)) } catch (_) {}
-                }
-            } catch (e) {
-                logger.debug('Could not load races from backend', e)
-            }
-        }
-        void loadRaces()
-    // eslint-disable-next-line
-    }, [])
+        return () => {}
+    // eslint-disable-next-line         
+    }, [selectedRegatta]);
 
     const handleCreate = async (name: string) => {
-        const regatta = { name, paddlers: {}, races: [] };
-        setRegattaState(regatta);
-        // navigate('/category');
+        setRegattaState({ name, paddlers: [], races: [] });
         navigate('/paddlers');
-
-
-
-        // // build nested tree from current selections (if available)
-        // const categories = (state.categories || "").split(",").map(s => s.trim()).filter(Boolean)
-        // const types = (state.types || "").split(",").map(s => s.trim()).filter(Boolean)
-        // const distances = (state.distance || "").split(",").map(s => s.trim()).filter(Boolean)
-        // const boats = (state.boatType || "").split(",").map(s => s.trim()).filter(Boolean)
-
-        // // default to at least one value so tree/flat produce entries
-        // const cats = categories.length ? categories : ["Default"]
-        // const tps = types.length ? types : ["Default"]
-        // const dists = distances.length ? distances : ["200m"]
-        // const bts = boats.length ? boats : ["Standard"]
-
-        // const newTree = buildTreeFromSelections(name, cats, tps, dists, bts)
-
-        // // delegate persistence and regatta initialization to RegattaContext actions
-        // try {
-        //     if (regattaActions && typeof regattaActions.createRace === 'function') {
-        //         await regattaActions.createRace(name, newTree)
-        //     }
-        // } catch (e) {
-        //     console.debug('createRace action failed', e)
-        // }
-
-        // navigate('/category')
     }
 
-    const [, setRegatta, regattaActions] = useRegattaState()
-
-    const parseRegattaData = (value: string) => {
-
-    }
+    // const [, setRegatta, regattaActions] = useRegattaState()
 
     const handleSelect = (value: string) => {
-        logger.debug("Selected regatta", value, "with configs", regattaConfigs[value]);
-        setRegatta(regattaConfigs[value] || { name: value, paddlers: {}, configs: [] });
-
-        // set selected race in global state and navigate into the wizard
-        // setState(prev => ({...prev, selected: value}))
-
-
-
-        // determine raceName and load corresponding nested tree and flat configs
-        // const flatAll = state.configs || {}
-        // let raceName = value
-        // if (flatAll[value] && flatAll[value]._meta && flatAll[value]._meta.raceName) {
-        //     raceName = flatAll[value]._meta.raceName
-        // }
-
-        // let regattaTree: any = {}
-        // let regattaFlat: any = {}
-        // let regattaPaddlers: any[] = []
-
-        // if (state.configTree && state.configTree[raceName]) {
-        //     // load nested tree for this race
-        //     regattaTree = { [raceName]: state.configTree[raceName] }
-        //     regattaFlat = buildFlatFromTree(regattaTree)
-        //     // prefer paddlers from the selected flat key if present
-        //     const selectedFlat = regattaFlat[value] || flatAll[value]
-        //     if (selectedFlat && selectedFlat.paddlers) {
-        //         const pm = selectedFlat.paddlers
-        //         regattaPaddlers = Array.isArray(pm) ? pm : Object.keys(pm || {}).map(k => pm[k])
-        //     }
-        // } else {
-        //     // fall back to filtering existing flat configs by raceName
-        //     const keys = Object.keys(flatAll).filter(k => flatAll[k]?._meta?.raceName === raceName)
-        //     keys.forEach(k => regattaFlat[k] = flatAll[k])
-        //     const selectedFlat = regattaFlat[value] || flatAll[value]
-        //     if (selectedFlat && selectedFlat.paddlers) {
-        //         const pm = selectedFlat.paddlers
-        //         regattaPaddlers = Array.isArray(pm) ? pm : Object.keys(pm || {}).map(k => pm[k])
-        //     }
-        // }
-
-        // setRegatta(prev => ({...prev, selected: value, configTree: regattaTree, configs: regattaFlat, paddlers: regattaPaddlers, raceList: Object.keys(regattaFlat)}))
-
-
-        // navigate('/setupboard');
-        navigate('/manage');
+        setSelectedRegatta(value);
     }
 
+    const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+    const importRegattaFromFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files && e.target.files[0]
+        if (!file) return
+
+        const reader = new FileReader()
+        reader.onload = () => {
+            try {
+                const text = reader.result as string
+                const parsed = JSON.parse(text)
+                if (!parsed || typeof parsed !== 'object' || !parsed.name) {
+                    // eslint-disable-next-line no-alert
+                    alert('Invalid regatta JSON: missing name property')
+                    return
+                }
+
+                setRegattaState(parsed)
+
+                try {
+                    const raw = localStorage.getItem('regattaConfigs')
+                    const existing = raw ? JSON.parse(raw) : {}
+                    existing[parsed.name] = parsed
+                    localStorage.setItem('regattaConfigs', JSON.stringify(existing))
+                    setAllRegattas(existing)
+                } catch (err) {
+                    console.error('Failed to persist imported regatta to localStorage', err)
+                }
+
+                // eslint-disable-next-line no-alert
+                alert(`Imported regatta "${parsed.name}"`)
+            } catch (err) {
+                // eslint-disable-next-line no-alert
+                alert('Failed to parse JSON file')
+            }
+        }
+        reader.readAsText(file)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+
+    const triggerImportClick = () => fileInputRef.current?.click()
+
+    const exportRegattaAsJson = () => {
+        if (!regatta) {
+            // user feedback if no regatta is selected
+            // eslint-disable-next-line no-alert
+            alert('No regatta selected to export');
+            return;
+        }
+
+        try {
+            const json = JSON.stringify(regatta, null, 2)
+            const blob = new Blob([json], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const anchor = document.createElement('a')
+            const safeName = (regatta.name || 'regatta').toString().replace(/\s+/g, '_')
+            anchor.href = url
+            anchor.download = `${safeName}.json`
+            document.body.appendChild(anchor)
+            anchor.click()
+            anchor.remove()
+            URL.revokeObjectURL(url)
+        } catch (err) {
+            console.error('Failed to export regatta', err)
+        }
+    }
+
+    const deleteRegatta = () => {
+        if (!regatta) return;
+        logger.debug("Deleting regatta with name", regatta.name);
+        const raw = localStorage.getItem('regattaConfigs')
+        const existing = raw ? JSON.parse(raw) : {}
+        delete existing[regatta.name]
+
+        localStorage.setItem('regattaConfigs', JSON.stringify(existing))
+        setAllRegattas(existing)
+        setRegattaState(null)
+    }
+
+    logger.debug("Rendering SetupHome with regatta", regatta, "and allRegattas", allRegattas);
     return (
         <div className={`p-6 max-w-[900px] mx-auto`}>
             <header className={`flex items-center justify-between mb-6`}>
@@ -204,24 +141,39 @@ export default function SetupHome() {
                     <h1 className={`text-2xl font-semibold`}>Regatta configurations</h1>
                     <p className={`text-sm text-gray-500`}>Select an existing configuration or create a new one to begin the wizard.</p>
                 </div>
-                <div>
-                    <button onClick={() => setCreateOpen(true)} className={`px-4 py-2 bg-green-500 text-white rounded`}>New configuration</button>
+                <div className={`flex gap-2`}>
+                    <button onClick={() => setCreateOpen(true)} className={`px-2 py-1 bg-sky-500 text-white rounded`}>New</button>
+                    <button onClick={triggerImportClick} className={`px-2 py-1 bg-sky-500 text-white rounded`}>Import</button>
                 </div>
             </header>
 
             <div className={`grid grid-cols-1 md:grid-cols-2 gap-4`}>
-                <div>
+                <div className='flex gap-4'>
                         <ListWidget
                             label={`Saved configurations`}
-                            // items={state.raceList ?? []}
-                            items={Object.keys(regattaConfigs) ?? []}
+                            items={Object.keys(allRegattas ?? {})}
                             setSelection={(v) => handleSelect(v)}
-                            selectedIndex={Object.keys(regattaConfigs).indexOf(regatta?.name ?? '') + 1}
+                            selectedIndex={regatta ? Object.keys(allRegattas ?? {}).indexOf(regatta?.name ?? '') : -1}
+                            // selectedItem={regatta?.name ?? null}
                         />
+                        {regatta && (
+                            <div className={`flex flex-col justify-end gap-2 text-sm `}>
+                                <input ref={fileInputRef} type="file" accept=".json,application/json" style={{display: 'none'}} onChange={importRegattaFromFile} />
+                                <button onClick={() => {
+                                    navigate('/manage');
+                                }} className={`px-2 py-1 bg-green-600 text-white rounded`}>Manage races</button>
+                                <button onClick={() => {
+                                    navigate('/setupboard');
+                                }} className={`px-2 py-1 bg-green-600 text-white rounded`}>Setup boat config</button>
+                                
+                                <button onClick={exportRegattaAsJson} className={`px-2 py-1 bg-blue-500 text-white rounded`}>Export configuration</button>
+                                <button onClick={deleteRegatta} className={`px-2 py-1 bg-red-400 text-white rounded`}>Delete configuration</button>
+                            </div>
+                        )}
                 </div>
             </div>
 
-            <CreateRaceModal open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreate} />
+            <CreateRegattaModal open={createOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreate} />
         </div>
     )
 }

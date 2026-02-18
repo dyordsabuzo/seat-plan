@@ -1,13 +1,13 @@
-import {useSetupState} from "../../../context/SetupContext";
-import {useNavigate} from "react-router-dom";
-import {useState, useEffect, useRef, useMemo} from "react";
-import {processFile} from "../../../utils/DataBuilder";
-import ConfigHelper from '../../../utils/ConfigHelper'
-import {useRegattaState} from "../../../context/RegattaContext";
-import { Regatta } from "../../../types/RegattaType";
-import DataTable, { Column } from '../../../components/basic/DataTable'
-import { logger } from "../../../common/helpers/logger";
-import Breadcrumb from "../../../components/basic/Breadcrumb";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { logger } from "../../common/helpers/logger";
+import Breadcrumb from "../../components/basic/Breadcrumb";
+import DataTable, { Column } from '../../components/basic/DataTable';
+import { useRegattaState } from "../../context/RegattaContext";
+import { useSetupState } from "../../context/SetupContext";
+import { Regatta } from "../../types/RegattaType";
+import ConfigHelper from '../../utils/ConfigHelper';
+import { processFile } from "../../utils/DataBuilder";
 
 type Paddler = {
     id: string,
@@ -21,7 +21,7 @@ export default function PaddlerListUpload() {
     const { setting: state, setSetting: setState } = useSetupState()
     const [regatta]:[Regatta] = useRegattaState()
     
-    const [mode, setMode] = useState<'upload'|'manual'>('upload')
+    const [mode] = useState<'upload'|'manual'>('upload')
     const [manualText, setManualText] = useState('')
     const [fileName, setFileName] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
@@ -365,11 +365,11 @@ export default function PaddlerListUpload() {
                     data={filtered}
                     rowKey={'id'}
                     columns={[
-                        {key: 'id', title: 'ID'},
-                        {key: 'name', title: 'Name', editable: true, inputType: 'text'},
-                        {key: 'weight', title: 'Weight (kg)', editable: true, inputType: 'number'},
-                        {key: 'gender', title: 'Gender', editable: true, inputType: 'select', options: [{value: 'M', label: 'M'}, {value: 'F', label: 'F'}, {value: 'O', label: 'Other'}]},
-                        {key: 'birthdate', title: 'DOB', editable: true, inputType: 'date'}
+                        {key: 'id', title: 'ID', sortable: true, filterable: true},
+                        {key: 'name', title: 'Name', editable: true, inputType: 'text', sortable: true, filterable: true},
+                        {key: 'weight', title: 'Weight (kg)', editable: true, inputType: 'number', sortable: true, filterable: true},
+                        {key: 'gender', title: 'Gender', editable: true, inputType: 'select', options: [{value: 'M', label: 'M'}, {value: 'F', label: 'F'}, {value: 'O', label: 'Other'}], sortable: true, filterable: true},
+                        {key: 'birthdate', title: 'DOB', editable: true, inputType: 'date', sortable: true, filterable: true}
                     ] as Column<Paddler>[]}
                     onSave={handleSave}
                     onDelete={deletePaddler}

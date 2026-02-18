@@ -133,4 +133,5 @@ export function extractFirstBoatConfig(nested: any) {
     }
 }
 
+// eslint-disable-next-line 
 export default {buildNestedConfig, setPaddlersInNestedConfig, addPaddlerToNestedConfig, extractFirstBoatConfig}

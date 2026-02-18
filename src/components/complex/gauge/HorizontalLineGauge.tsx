@@ -13,14 +13,12 @@ export default function HorizontalLineGauge({
 
         if (value < toleranceMin) {
             const totalSteps = (toleranceMin - value) / step
-            console.log(percentMin - totalSteps)
             return {
                 pos: `${Math.max(percentMin - totalSteps, 0)}%`,
                 labelPos: `${Math.max((percentMin - 5) - totalSteps, 0)}%`
             }
         } else {
             const totalSteps = (value - toleranceMin) / step
-            console.log(percentMin + totalSteps)
             return {
                 pos: `${Math.min(percentMin + totalSteps, 100)}%`,
                 labelPos: `${Math.min((percentMin - 5) + totalSteps, 87)}%`

@@ -12,7 +12,7 @@ type Props = {
 export function ReserveSection({section, onAddPaddler}: Props) {
     const [open, setOpen] = useState(false)
 
-    const [regatta] = useRegattaState()
+    const {state: regatta} = useRegattaState()
 
     const handleAdd = (paddler: any) => {
         if (onAddPaddler) onAddPaddler(paddler)

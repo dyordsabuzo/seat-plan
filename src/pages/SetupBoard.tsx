@@ -1,283 +1,67 @@
-import {useEffect, useState, useMemo} from "react";
-import {useSetupState} from "../context/SetupContext";
-import {ListWidget} from "../components/complex/widgets/ListWidget";
-import RaceBoard from "../components/board/RaceBoard";
-import CreateRaceModal from "../components/complex/modals/CreateRaceModal";
-import {BoatPosition} from "../enums/BoatConstant";
-import {useNavigate, Link} from "react-router-dom";
-import Breadcrumb from '../components/basic/Breadcrumb'
-import ConfigHelper from '../utils/ConfigHelper'
-import { useRegattaState } from "../context/RegattaContext";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { logger } from "../common/helpers/logger";
-import { Race, Regatta } from "../types/RegattaType";
+import Breadcrumb from '../components/basic/Breadcrumb';
+import RaceBoard from "../components/board/RaceBoard";
+import { ListWidget } from "../components/complex/widgets/ListWidget";
+import { useRegattaState } from "../context/RegattaContext";
+import { Race } from "../types/RegattaType";
 
 export function SetupBoard() {
     // const [state, setState] = useSetupState()
-    const [regatta]: [Regatta] = useRegattaState();
-    const [selection, setSelection] = useState(null)
+    const {state: regatta} = useRegattaState();
+    const [selection, setSelection] = useState<string | null>(null)
     const [race, setRace] = useState<Race|null>(null)
-    const [createOpen, setCreateOpen] = useState(false)
 
     const navigate = useNavigate()
 
-    // useEffect(() => {
-    //     if (!("raceList" in state)) {
-    //         navigate('/seat-plan')
-    //     } else {
-    //         setSelection(state.raceList[0])
-    //     }
-    //     return () => {
-    //     }
-    // }, [state, navigate]);
-
-    // useEffect(() => {
-    //     if (selection && state.configs) {
-    //         if (selection in state.configs) {
-    //             setBoardConfigs(state.configs[selection])
-    //         }
-    //     }
-    //     return () => {
-    //     }
-    // }, [selection, state.configs]);
-
-    // useEffect(() => {
-    //     if (selection) {
-    //         const {paddlers, configs} = state
-    //
-    //         if (!configs || selection ! in configs) {
-    //             const [ageCategory, genderCategory, distance, boatType] = selection.split("-")
-    //             const _paddlers: any = Array.from(paddlers.map((paddler: any) => ({
-    //                 ...paddler,
-    //                 content: paddler.name
-    //             })))
-    //
-    //             const boatSize = BoatSize[boatType.toUpperCase()]
-    //             const _configs = Array.from({length: 3}, (value, index) => {
-    //                 return [
-    //                     getItems(1, 0, "scratch"),
-    //                     getItems(1, 1, "drummer"),
-    //                     getItems(boatSize, boatSize, "left"),
-    //                     getItems(boatSize, boatSize, "right"),
-    //                     getItems(1, 1, "sweep")
-    //                 ]
-    //             })
-    //
-    //             // setState({
-    //             //     ...state,
-    //             //     configs: {
-    //             //         [selection]: {
-    //             //             paddlers: _paddlers,
-    //             //             configs: _configs
-    //             //         }
-    //             //     }
-    //             // })
-    //
-    //             setBoardConfigs({
-    //                 paddlers: _paddlers,
-    //                 configs: _configs
-    //             })
-    //         }
-    //     }
-    //     return () => {
-    //     }
-    // }, [selection, state]);
-
-    // useEffect(() => {
-    //     if (state.configs) {
-    //         // prefer previously selected race if present in state
-    //         if ((state as any).selected && (state as any).selected in state.configs) {
-    //             setSelection((state as any).selected)
-    //         } else {
-    //             setSelection(Object.keys(state.configs)[0])
-    //         }
-    //     }
-    //     return () => {
-    //     }
-    // }, [state.configs]);
-
-    // fetching saved races moved to SetupHome component
-
-    const breadcrumbTitle = useMemo(() => {
-        if (race && regatta.name) {
-            return `${regatta.name} — ${race.category} ${race.boatType}`
+    useEffect(() => {
+        logger.debug("SetupBoard mounted with regatta state", regatta)
+        if (!regatta) {
+            logger.debug("Regatta missing in SetupBoard, redirecting to root")
+            navigate('/', { replace: true })
         }
-        if (regatta.name) return regatta.name
-        return 'Board'
-    }, [regatta.name, race])
-
-    // const addPaddler = (paddler: any) => {
-    //     // If we have a nested config tree, add paddler into the tree and rebuild flat configs
-    //     if (state.configTree) {
-    //         const newTree = ConfigHelper.addPaddlerToNestedConfig(state.configTree, paddler)
-
-    //         const buildFlatFromTree = (tree: any) => {
-    //             const flat: any = {}
-    //             Object.keys(tree).forEach((raceName) => {
-    //                 const categories = tree[raceName]
-    //                 if (!Array.isArray(categories)) return
-    //                 categories.forEach((catObj: any) => {
-    //                     const cat = Object.keys(catObj)[0]
-    //                     const types = catObj[cat]
-    //                     types.forEach((typeObj: any) => {
-    //                         const type = Object.keys(typeObj)[0]
-    //                         const distances = typeObj[type]
-    //                         distances.forEach((distObj: any) => {
-    //                             const dist = Object.keys(distObj)[0]
-    //                             const boats = distObj[dist]
-    //                             boats.forEach((boatObj: any) => {
-    //                                 const boat = Object.keys(boatObj)[0]
-    //                                 const value = boatObj[boat]
-    //                                 const key = `${cat}-${type}-${dist}-${boat}`
-    //                                 flat[key] = {
-    //                                     ...(value || {paddlers: {}, configs: []}),
-    //                                     _meta: { raceName, category: cat, type, distance: dist, boatType: boat }
-    //                                 }
-    //                             })
-    //                         })
-    //                     })
-    //                 })
-    //             })
-    //             return flat
-    //         }
-
-    //         const flat = buildFlatFromTree(newTree)
-    //         const globalPaddlers = Array.isArray(state.paddlers) ? [...state.paddlers] : []
-    //         globalPaddlers.push(paddler)
-
-    //         setState({
-    //             ...state,
-    //             configTree: newTree,
-    //             configs: flat,
-    //             paddlers: globalPaddlers
-    //         })
-    //         return
-    //     }
-
-    //     // create new configs map to avoid mutating nested objects in-place
-    //     const configs = {...state.configs}
-    //     if (!configs[selection]) configs[selection] = {paddlers: {}, configs: []}
-
-    //     const existingPaddlers = configs[selection].paddlers || {}
-    //     const newPaddlersMap = {
-    //         ...existingPaddlers,
-    //         [paddler.id]: paddler
-    //     }
-
-    //     // also add to each saved config's reserve group so it appears in the ReserveSection
-    //     const savedConfigs = Array.isArray(configs[selection].configs) ? configs[selection].configs : []
-    //     const newSavedConfigs = savedConfigs.map((savedCfg: any) => {
-    //         const group = Array.isArray(savedCfg) ? [...savedCfg] : []
-    //         const reserveIndex = BoatPosition.RESERVE
-    //         if (!group[reserveIndex]) group[reserveIndex] = []
-    //         // insert new paddler object with 'content' for label
-    //         group[reserveIndex] = [{...paddler, content: paddler.name}, ...group[reserveIndex]]
-    //         return group
-    //     })
-
-    //     // replace the nested selection object with a new object reference
-    //     configs[selection] = {
-    //         ...configs[selection],
-    //         paddlers: newPaddlersMap,
-    //         configs: newSavedConfigs
-    //     }
-
-    //     // const globalPaddlers = Array.isArray(state.paddlers) ? [...state.paddlers] : []
-    //     // globalPaddlers.push(paddler)
-
-    //     // setState({
-    //     //     ...state,
-    //     //     configs,
-    //     //     paddlers: globalPaddlers
-    //     // })
-    // }
+    // eslint-disable-next-line 
+    }, [regatta])
 
     const handleSelection = (value: string) => {
-        const [ageCategory, genderCategory, distance, boatType] = value.split("-");
+        if (value) {
+            const [ageCategory, genderCategory, distance, boatType] = value.split("-");
 
-        const selectedRace:Race = regatta.races.find(race => {
-            return race.category === ageCategory &&
-                race.type === genderCategory &&
-                race.distance === distance &&
-                race.boatType === boatType;
-        });
+            const selectedRace:Race = regatta.races.find(race => {
+                return race.category === ageCategory &&
+                    race.type === genderCategory &&
+                    race.distance === distance &&
+                    race.boatType === boatType;
+            });
 
-        if (!selectedRace.configs) {
-            selectedRace.configs = [];
+            if (!selectedRace.configs) {
+                selectedRace.configs = [];
+            }
+
+            if (!selectedRace.paddlers) {
+                selectedRace.paddlers = regatta.paddlers
+            }
+            setRace(selectedRace);
+            setSelection(value)
         }
-
-        if (!selectedRace.paddlers) {
-            selectedRace.paddlers = regatta.paddlers
-        }
-        setRace(selectedRace);
-        setSelection(value)
     }
 
     const handleUpdateConfig = (index: number, config: any) => {
         logger.debug("Updating config", {
             index, config, selection,race
         })
-        // const selectedConfig = state.configs[selection]
-        // if (selectedConfig.configs.length < index + 1) {
-        //     selectedConfig.configs.push(config)
-        // } else {
-        //     selectedConfig.configs.splice(index, 1)
-        //     selectedConfig.configs.splice(index, 0, config)
-        // }
-
-        
-        // fetch configs from regatta based on selection
-        if (race.configs) {
-            if (race.configs.length === 0) {
-                race.configs.push(config);
-            } else {
-                race.configs.splice(index, 1)
-                race.configs.splice(index, 0, config)
-            }
-        } else {
-            race.configs = [config];
-        }
-
-        // const configs = state.configs
-        // logger.debug("Current configs before update", configs, "for selection", selection)
-
-        // if (configs[selection].configs.length < index + 1) {
-        //     configs[selection].configs.push(config)
-        // } else {
-        //     configs[selection].configs.splice(index, 1)
-        //     configs[selection].configs.splice(index, 0, config)
-        // }
-
-        // console.log(configs)
-
-        // setState({
-        //     ...state,
-        //     configs
-        // })
-
-        // const selectedConfig = state.configs[selection] ?? {}
-        // if (selectedConfig) {
-        //     selectedConfig.config.splice(index, 1)
-        //     selectedConfig.config.splice(index, 0, config)
-        //     setState({
-        //         ...state,
-        //         configs: {
-        //             [selection]: selectedConfig
-        //         }
-        //     })
-        // } else {
-        //     console.log("selected Config not set")
-        // }
     }
 
 
     return (
         <div className={`p-8`}>
             <div className="w-full">
-                <div className="mb-4 max-w-[900px] mx-auto px-2">
-                    <Breadcrumb items={[{label: 'Home', to: '/'}, {label: 'Setup', to: '/seat-plan'}]} title={breadcrumbTitle} backPath={'/'} />
+                <div className="mb-4 max-w-[900px]">
+                    <Breadcrumb items={[{label: 'Home', to: '/'}]} title={`Boat configuration`} backPath={'/'} />
                 </div>
                 <h1 className={`w-full flex py-2 font-semibold`}>
-                    {regatta.name}
+                    Regatta: {regatta ? regatta.name : ""}
                 </h1>
             </div>
             <div className={`flex justify-center`}>
@@ -291,13 +75,15 @@ export function SetupBoard() {
                     </div>)
                 }
 
-                <div className={`float-right pl-8`}>
-                    <ListWidget label={"Race listing"}
-                                items={regatta.races.map(config => `${config.category}-${config.type}-${config.distance}-${config.boatType}`) ?? []}
-                                selectedIndex={selection ? regatta.races?.findIndex(config => `${config.category}-${config.type}-${config.distance}-${config.boatType}` === selection) - 1 : -1}
-                                setSelection={handleSelection}
-                    />
-                </div>
+                {regatta && (
+                    <div className={`float-right pl-8`}>
+                        <ListWidget label={"Race listing"}
+                                    items={regatta.races.map(config => `${config.category}-${config.type}-${config.distance}-${config.boatType}`) ?? []}
+                                    selectedIndex={selection ? regatta.races?.findIndex(config => `${config.category}-${config.type}-${config.distance}-${config.boatType}` === selection) - 1 : -1}
+                                    setSelection={handleSelection}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     )

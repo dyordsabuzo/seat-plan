@@ -1,6 +1,6 @@
-import {createContext, useContext, useState} from "react";
-import { calculateBalance, calculateLineBalance, calculateSideBalance } from "../utils/WeightCalculator";
-import Boat from "../refactor/boat/Boat";
+import { createContext, useContext, useState } from "react";
+import { calculateLineBalance, calculateSideBalance } from "../utils/WeightCalculator";
+// import Boat from "../refactor/boat/Boat";
 
 export const SetupStateContext = createContext({})
 
@@ -14,8 +14,11 @@ const setDefaultSettings = () => {
             STANDARD: [6, 4.5, 3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5, -4.5, -6],
             SMALL: [6, 2.5, 1.5, 0.5, -1.5, -2.5, -6]
         },
+        oarWeightOffset: 3,
         defaultDrumWeight: 14,
-        defaultSweepWeight: 7
+        defaultSweepWeight: 7,
+        sideWeightTolerance: 5,
+        lineWeightTolerance: 10
     };
 }
 
@@ -43,7 +46,7 @@ export function SetupProvider({children}) {
         return {sideBalance, lineBalance};
     }
 
-    const value: any = { setting: state, setSetting: setState, checkBoatBalance };
+    const value: any = { state, setState, checkBoatBalance };
 
     return (
         <SetupStateContext.Provider value={value}>

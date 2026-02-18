@@ -9,11 +9,11 @@
 import {SetupProvider} from "./context/SetupContext";
 import {RegattaProvider} from "./context/RegattaContext";
 import {BrowserRouter, Outlet, Route, Routes} from "react-router-dom";
-import RaceAgeCategory from "./pages/wizard/boat-setup/RaceAgeCategory";
-import RaceType from "./pages/wizard/boat-setup/RaceType";
-import RaceDistance from "./pages/wizard/boat-setup/RaceDistance";
-import RaceBoatSize from "./pages/wizard/boat-setup/RaceBoatSize";
-import PaddlerListUpload from "./pages/wizard/boat-setup/PaddlerListUpload";
+import RaceAgeCategory from "./pages/wizard/RaceAgeCategory";
+import RaceType from "./pages/wizard/RaceType";
+import RaceDistance from "./pages/wizard/RaceDistance";
+import RaceBoatSize from "./pages/wizard/RaceBoatSize";
+import PaddlerListUpload from "./pages/wizard/PaddlerListUpload";
 import SetupBoard from "./pages/SetupBoard";
 import SetupHome from "./pages/SetupHome";
 import Manage from "./pages/regatta/Manage";

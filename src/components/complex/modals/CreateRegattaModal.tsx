@@ -6,7 +6,7 @@ type Props = {
     onCreate: (name: string) => void
 }
 
-const CreateRaceModal: React.FC<Props> = ({open, onClose, onCreate}) => {
+const CreateRegattaModal: React.FC<Props> = ({open, onClose, onCreate}) => {
     const [name, setName] = useState("")
 
     if (!open) return null
@@ -51,4 +51,4 @@ const CreateRaceModal: React.FC<Props> = ({open, onClose, onCreate}) => {
     )
 }
 
-export default CreateRaceModal
+export default CreateRegattaModal

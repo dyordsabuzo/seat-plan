@@ -1,19 +1,18 @@
-import {useSetupState} from "../../../context/SetupContext";
-import {useForm} from "react-hook-form";
-import {Link, useNavigate} from "react-router-dom";
-import {useState} from "react";
-import {SelectionButton} from "../../../components/basic/buttons/SelectionButton";
-import { useRegattaState } from "../../../context/RegattaContext";
-import { logger } from "../../../common/helpers/logger";
-import { last } from "cypress/types/lodash";
-import { Race } from "../../../types/RegattaType";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import { logger } from "../../common/helpers/logger";
+import { SelectionButton } from "../../components/basic/buttons/SelectionButton";
+import { useRegattaState } from "../../context/RegattaContext";
+import { useSetupState } from "../../context/SetupContext";
+import { Race } from "../../types/RegattaType";
 
 export default function BaseWidget({
                                        children = null, fieldName, defaults, navigateTo,
                                        navigateFrom = "", label, lastPage = false
                                    }) {
-    const {state, setState} = useSetupState()
-    const [regatta, setRegatta] = useRegattaState()
+    const {state} = useSetupState()
+    const {state: regatta} = useRegattaState()
 
     const [elements, setElements] = useState(defaults)
 
@@ -49,7 +48,7 @@ export default function BaseWidget({
         if (lastPage) {
             const races: Race[] = [];
 
-            let id = 0;
+            let id = 1;
             regatta.categories.forEach((category: string) => {
                 regatta.types.forEach((type: string) => {
                     regatta.distances.forEach((distance: string) => {

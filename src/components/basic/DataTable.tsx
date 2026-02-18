@@ -9,6 +9,8 @@ export type Column<T> = {
     inputType?: 'text'|'number'|'select'|'date'
     options?: Option[]
     width?: string
+    sortable?: boolean
+    filterable?: boolean
     render?: (row: T) => React.ReactNode
 }
 
@@ -25,6 +27,8 @@ type Props<T> = {
 export default function DataTable<T extends Record<string, any>>({columns, data, rowKey, noEdit = false, onSave, onDelete, className = ''}: Props<T>) {
     const [editingId, setEditingId] = useState<any>(null)
     const [draft, setDraft] = useState<Partial<T> | null>(null)
+    const [sortBy, setSortBy] = useState<{key: string|null, direction: 'asc'|'desc'|null}>({key: null, direction: null})
+    const [filters, setFilters] = useState<Record<string,string>>({})
 
     const startEdit = (row: T) => {
         setEditingId(row[rowKey as string])
@@ -43,15 +47,89 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
         setDraft(null)
     }
 
+    const toggleSort = (key: string, sortable?: boolean) => {
+        if (!sortable) return
+        setSortBy(prev => {
+            if (prev.key !== key) return {key, direction: 'asc'}
+            if (prev.direction === 'asc') return {key, direction: 'desc'}
+            return {key: null, direction: null}
+        })
+    }
+
+    const setFilterValue = (key: string, value: string) => {
+        setFilters(prev => ({...prev, [key]: value}))
+    }
+
+    const processed = React.useMemo(() => {
+        let rows = Array.isArray(data) ? [...data] : []
+
+        // apply filters
+        rows = rows.filter(r => {
+            return Object.keys(filters).every(fk => {
+                const val = (filters as any)[fk]
+                if (!val && val !== 0) return true
+                const cell = (r as any)[fk]
+                if (cell === undefined || cell === null) return false
+                // if column has options (select), we compare string
+                const sCell = String(cell)
+                return sCell.toLowerCase().includes(String(val).toLowerCase())
+            })
+        })
+
+        // apply sorting
+        if (sortBy.key && sortBy.direction) {
+            const key = sortBy.key
+            rows.sort((a,b) => {
+                const va = (a as any)[key]
+                const vb = (b as any)[key]
+                if (va == null && vb == null) return 0
+                if (va == null) return sortBy.direction === 'asc' ? -1 : 1
+                if (vb == null) return sortBy.direction === 'asc' ? 1 : -1
+                if (typeof va === 'number' && typeof vb === 'number') {
+                    return sortBy.direction === 'asc' ? va - vb : vb - va
+                }
+                const sa = String(va)
+                const sb = String(vb)
+                return sortBy.direction === 'asc' ? sa.localeCompare(sb) : sb.localeCompare(sa)
+            })
+        }
+
+        return rows
+    }, [data, filters, sortBy])
+
     return (
         <div className={`overflow-auto border rounded-lg ${className}`}>
             <table className={`min-w-full divide-y divide-gray-200`}> 
                 <thead className={`bg-gray-50`}>
                     <tr>
                         {columns.map((col, idx) => (
-                            <th key={idx} className={`px-4 py-2 text-left text-xs font-medium text-gray-500`} style={{width: col.width}}>{col.title}</th>
+                            <th key={idx} className={`px-4 py-2 text-left text-xs font-medium text-gray-500 ${col.sortable ? 'cursor-pointer select-none' : ''}`} style={{width: col.width}} onClick={() => toggleSort(String(col.key), col.sortable)}>
+                                <div className={`flex items-center gap-2`}>{col.title}
+                                    {sortBy.key === String(col.key) && sortBy.direction === 'asc' && <span>▲</span>}
+                                    {sortBy.key === String(col.key) && sortBy.direction === 'desc' && <span>▼</span>}
+                                </div>
+                            </th>
                         ))}
                         <th className={`px-4 py-2 text-right text-xs font-medium text-gray-500`}>Actions</th>
+                    </tr>
+
+                    {/* Filter row */}
+                    <tr>
+                        {columns.map((col, idx) => (
+                            <th key={idx} className={`px-2 py-1 text-left text-xs font-medium text-gray-500`}> 
+                                {col.filterable ? (
+                                    col.inputType === 'select' && col.options ? (
+                                        <select className={`border rounded p-1 text-sm w-full`} value={filters[String(col.key)] ?? ''} onChange={e => setFilterValue(String(col.key), e.target.value)}>
+                                            <option value="">(any)</option>
+                                            {col.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                        </select>
+                                    ) : (
+                                        <input className={`w-full border rounded p-1 text-sm`} value={filters[String(col.key)] ?? ''} onChange={e => setFilterValue(String(col.key), e.target.value)} placeholder={`Filter ${col.title}`} />
+                                    )
+                                ) : null}
+                            </th>
+                        ))}
+                        <th className={`px-4 py-2 text-right text-xs font-medium text-gray-500`}> </th>
                     </tr>
                 </thead>
                 <tbody className={`bg-white divide-y divide-gray-100`}>
@@ -61,7 +139,7 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
                         </tr>
                     )}
 
-                    {data.map((row, rIdx) => {
+                    {processed.map((row, rIdx) => {
                         const key = row[rowKey as string]
                         const isEditing = editingId === key
                         return (

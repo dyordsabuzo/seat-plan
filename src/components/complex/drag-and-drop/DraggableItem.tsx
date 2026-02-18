@@ -1,6 +1,6 @@
-import {Draggable} from "react-beautiful-dnd";
-import React from "react";
-import {LabelWidget} from "../widgets/LabelWidget";
+import { Draggable } from "react-beautiful-dnd";
+import { LabelWidget } from "../widgets/LabelWidget";
+// import { logger } from "../../../common/helpers/logger";
 // import {BoatLabel} from "../../../enums/BoatConstant";
 
 type Props = {
@@ -12,6 +12,7 @@ type Props = {
 }
 
 export default function DraggableItem({item, index, position, defaultLabel = "", onButtonClick = null}: Props) {
+
     const clickHandler = () => {
         onButtonClick(item, position, index)
     }
@@ -28,7 +29,7 @@ export default function DraggableItem({item, index, position, defaultLabel = "",
                         dark:focus:ring-teal-700 font-medium rounded-lg text-sm 
                         p-2 text-center
                         ${snapshot.isDragging ? "bg-[lightgreen]" : ""}
-                        ${item.content === defaultLabel ? "bg-white" : "pl-10 md:px-5 bg-red-100"}
+                        ${item.content === defaultLabel ? "bg-white" : `pl-10 md:px-5 ${item.gender === "F" ? "bg-red-100" : "bg-blue-100"}`}
                     `}
                     ref={provided.innerRef}
                     {...provided.draggableProps}

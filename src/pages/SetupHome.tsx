@@ -136,6 +136,7 @@ export default function SetupHome() {
     logger.debug("Rendering SetupHome with regatta", regatta, "and allRegattas", allRegattas);
     return (
         <div className={`p-6 max-w-[900px] mx-auto`}>
+            <input ref={fileInputRef} type="file" accept=".json,application/json" style={{display: 'none'}} onChange={importRegattaFromFile} />
             <header className={`flex items-center justify-between mb-6`}>
                 <div>
                     <h1 className={`text-2xl font-semibold`}>Regatta configurations</h1>

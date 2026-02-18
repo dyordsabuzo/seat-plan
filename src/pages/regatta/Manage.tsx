@@ -6,10 +6,10 @@ import { useRegattaState } from "../../context/RegattaContext";
 // import Tabs from "../../refactor/Tabs";
 import { useNavigate } from "react-router-dom";
 import { useOptions } from "../../context/OptionsContext";
-import { Paddler, Race, Regatta } from "../../types/RegattaType";
+import { Paddler, Race } from "../../types/RegattaType";
 
 const Manage: React.FC = () => {
-    const [regatta, setRegatta]: [Regatta, any] = useRegattaState();
+    const {state: regatta, setState: setRegatta} = useRegattaState();
     const [races, setRaces] = useState<Race[]>(regatta?.races || []);
     const [showAddRace, setShowAddRace] = useState(false)
     const [newRace, setNewRace] = useState<Partial<Race>>({category: '', type: '', distance: '', boatType: ''})

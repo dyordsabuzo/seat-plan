@@ -2,11 +2,11 @@ import React from 'react'
 import { useOptions } from '../../context/OptionsContext'
 
 type Props = {
-    optionKey: 'categories' | 'types' | 'distances' | 'boatTypes'
+    optionKey: 'categories' | 'types' | 'distances' | 'boatTypes' | 'genders'
     value?: string | undefined
-    onChange: (value: string) => void
     placeholder?: string
     className?: string
+    onChange: (value: string) => void
 }
 
 const OptionSelect: React.FC<Props> = ({ optionKey, value, onChange, placeholder, className }) => {

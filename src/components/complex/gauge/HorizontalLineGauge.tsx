@@ -46,8 +46,8 @@ export default function HorizontalLineGauge({
                           x1={calcPos().pos}
                           y2="0"
                           x2={calcPos().pos}
-                          strokeWidth="8"
-                          stroke="black"></line>
+                          strokeWidth="10"
+                          stroke="white"></line>
                 </g>
             </svg>
             <svg width={"100%"} height={20}>

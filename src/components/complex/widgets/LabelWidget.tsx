@@ -1,4 +1,3 @@
-import React from "react";
 
 type Props = {
     label: string
@@ -13,7 +12,7 @@ export function LabelWidget({label, onClick = null}: Props) {
                 {onClick && (
                     <button
                         type="button"
-                        className={`absolute -right-3 -top-1`}
+                        className={`absolute -right-1 -top-1`}
                         onClick={onClick}>
                         <span className={`text-xs text-gray-400`}>X</span>
                     </button>

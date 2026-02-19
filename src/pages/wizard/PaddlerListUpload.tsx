@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logger } from "../../common/helpers/logger";
 import Breadcrumb from "../../components/basic/Breadcrumb";
+import Container from '../../components/basic/Container';
 import DataTable, { Column } from '../../components/basic/DataTable';
 import { useRegattaState } from "../../context/RegattaContext";
 import { useSetupState } from "../../context/SetupContext";
@@ -19,7 +20,7 @@ type Paddler = {
 
 export default function PaddlerListUpload() {
     const { setting: state, setSetting: setState } = useSetupState()
-    const [regatta]:[Regatta] = useRegattaState()
+    const { state: regatta, setState: setRegatta } : {state: Regatta, setState: (next: Regatta|null) => void} = useRegattaState()
     
     const [mode] = useState<'upload'|'manual'>('upload')
     const [manualText, setManualText] = useState('')
@@ -99,7 +100,11 @@ export default function PaddlerListUpload() {
             }
 
             // update local table and global state
-            regatta.paddlers = paddlersArray;
+            try {
+                setRegatta(prev => ({...(prev || {}), paddlers: paddlersArray}))
+            } catch (e) {
+                console.debug('could not set regatta paddlers', e)
+            }
             // setPaddlersDisplayed(paddlersArray)
 
             // setState(prev => ({
@@ -144,7 +149,11 @@ export default function PaddlerListUpload() {
     const deletePaddler = (id: string) => {
         logger.debug(`Deleting paddler with id ${id}`)
         const remaining = paddlersDisplayed.filter(p => p.id !== id)
-        regatta.paddlers = remaining;
+        try {
+            setRegatta(prev => ({...(prev || {}), paddlers: remaining}))
+        } catch (e) {
+            console.debug('could not update regatta paddlers', e)
+        }
 
         setPaddlersDisplayed(remaining)
         // setState(prev => ({...prev, paddlers: remaining}))
@@ -162,7 +171,11 @@ export default function PaddlerListUpload() {
         if (updated.weight && isNaN(Number(updated.weight))) { setError('Weight must be a number'); return }
 
         const next = paddlersDisplayed.map(p => p.id === updated.id ? ({...p, ...updated}) : p)
-        regatta.paddlers = next
+        try {
+            setRegatta(prev => ({...(prev || {}), paddlers: next}))
+        } catch (e) {
+            console.debug('could not set regatta paddlers', e)
+        }
         setPaddlersDisplayed(next)
 
         // persist into SetupState and update nested configTree if present
@@ -197,9 +210,12 @@ export default function PaddlerListUpload() {
             birthdate: paddler.birthdate || null
         }
         const next:Paddler[] = [newP, ...paddlersDisplayed]
-        regatta.paddlers = next;
+        try {
+            setRegatta(prev => ({...(prev || {}), paddlers: next}))
+        } catch (e) {
+            console.debug('could not set regatta paddlers', e)
+        }
 
-        // setPaddlersDisplayed(next)
         setState(prev => ({
             ...prev,
             paddlers: next,
@@ -209,7 +225,7 @@ export default function PaddlerListUpload() {
     }
 
     return (
-        <div className={`p-6 max-w-4xl mx-auto`}>
+        <Container className="py-6">
             <header className={`flex items-center justify-between mb-6`}>
                 <div>
                     <div className="mb-4 max-w-[900px]">
@@ -418,6 +434,6 @@ export default function PaddlerListUpload() {
                     </div>
                 </div>
             )}
-        </div>
+        </Container>
     )
 }

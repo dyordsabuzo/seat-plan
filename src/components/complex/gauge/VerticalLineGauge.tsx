@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react'
+import { useMemo } from 'react'
 
 type Props = {
     GWidth?: number,
@@ -10,7 +10,7 @@ type Props = {
 }
 
 export default function VerticalLineGauge({
-                                                  GWidth = 12,
+                                                  GWidth = 16,
                                                   GHeight = 160,
                                                   value = 0,
                                                   toleranceMin = 0,

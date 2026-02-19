@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DragDropContext } from "react-beautiful-dnd";
 import { BoatLabel, BoatPosition, BoatSize } from "../../enums/BoatConstant";
 // import {calculateLineBalance, calculateSideBalance} from "../../utils/WeightCalculator";
@@ -6,6 +6,8 @@ import { logger } from "../../common/helpers/logger";
 import { useRegattaState } from '../../context/RegattaContext';
 import { Race } from "../../types/RegattaType";
 import { getItems, move, reorder } from "../../utils/ConfigurationHelper";
+// import CustomDragLayer from "../complex/drag-and-drop/CustomDragLayer";
+// import { setCurrentDragging } from "../complex/drag-and-drop/DragItemRegistry";
 import { HeaderButtonsWidget } from "../complex/widgets/HeaderButtonsWidget";
 import ConfigSection from "./ConfigSection";
 import { ReserveSection } from "./sections/ReserveSection";
@@ -32,6 +34,9 @@ type Props = {
 
 export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedRace}: Props) {
     const [selectedConfigIndex, setSelectedConfigIndex] = useState(null)
+    const [, setReserveCollapsed] = useState(false)
+    const reserveCloseRequestedRef = useRef(false)
+    const reserveCloseTimerRef = useRef<number | null>(null)
     const [configNames, setConfigNames] = useState<string[]>(race.configs.length < 2 ? ["Config 1"] : race.configs.map((_, index) => `Config ${index + 1}`))
     const [boardSetup, setBoardSetup] = useState<any>(null)
     // const [showWeights, setShowWeights] = useState(true)
@@ -83,6 +88,15 @@ export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedR
         if (!destination) {
             return;
         }
+        // ensure reserve is restored after drag completes
+        try {
+            if (reserveCloseTimerRef.current) {
+                window.clearTimeout(reserveCloseTimerRef.current)
+                reserveCloseTimerRef.current = null
+            }
+        } catch (e) {}
+        setReserveCollapsed(false)
+        // try { setCurrentDragging(null) } catch (e) {}
         const sInd = +source.droppableId;
         const dInd = +destination.droppableId;
 
@@ -125,43 +139,57 @@ export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedR
 
     return (
         <div className={`flex flex-col`}>
-            <div className="flex items-center gap-4 mt-4">
-                <span className={`text-sm text-gray-800`}>
-                    {`${race.category} ${race.type} ${race.distance} ${race.boatType}`}
-                </span>
-                <button onClick={() => {
-                    // Save logic here
-                }} className={`text-sm text-blue-500 border border-blue-500 rounded px-2 py-1`}>Save</button>
-                <button onClick={() => {
-                    race.configs = [];
-                    setSelectedConfigIndex(null);
-                }}
-                className={`text-sm text-blue-500 border border-blue-500 rounded px-2 py-1`}>Reset configs</button>
-                {/* <label className="flex items-center gap-2">
-                    <input
-                        type="checkbox"
-                        checked={showWeights}
-                        onChange={e => setShowWeights(e.target.checked)}
-                    />
-                    <span className="text-sm text-gray-800">Show Weights</span>
-                </label> */}
-            </div>
-
             <HeaderButtonsWidget names={configNames}
-                    clickedIndex={selectedConfigIndex}
-                    onClick={setSelectedConfigIndex}
-                    addHeaderHandler={() => setConfigNames([
-                        ...configNames,
-                        `Config ${configNames.length + 1}`
-                    ])}
+                clickedIndex={selectedConfigIndex}
+                onClick={setSelectedConfigIndex}
+                addHeaderHandler={() => setConfigNames([
+                    ...configNames,
+                    `Config ${configNames.length + 1}`
+                ])}
             />
-
+                
             {boardSetup && (
-                <DragDropContext onDragEnd={onDragEnd}>
-                    <div className={`flex items-start`}>
-                        <ReserveSection section={boardSetup[BoatPosition.RESERVE]} onAddPaddler={onAddPaddler} />
+                <DragDropContext
+                            onDragStart={(start) => {
+                                try {
+                                    const sInd = +start.source.droppableId
+                                    if (typeof window !== 'undefined' && window.innerWidth < 640 && sInd === BoatPosition.RESERVE) {
+                                        // close reserve panel on small screens while dragging so config area is exposed
+                                        // Delay the actual close until after the browser paints the initial drag preview
+                                        // so we avoid layout shifts that cause the preview to be offset from the cursor.
+                                        if (reserveCloseRequestedRef.current) {
+                                            // instead of fully hiding the reserve immediately, collapse it
+                                            // so the DOM remains present and the drag preview stays aligned
+                                            setReserveCollapsed(true)
+                                            // also schedule a small timeout to clear the collapsed state
+                                            if (reserveCloseTimerRef.current) {
+                                                window.clearTimeout(reserveCloseTimerRef.current)
+                                            }
+                                            reserveCloseTimerRef.current = window.setTimeout(() => {
+                                                setReserveCollapsed(false)
+                                                reserveCloseTimerRef.current = null
+                                            }, 500)
+                                        }
+                                        reserveCloseRequestedRef.current = false
+                                    }
+                                } catch (e) {
+                                    // ignore
+                                }
+                            }}
+                    onDragEnd={onDragEnd}
+                >
+                    <div className={`flex flex-col sm:flex-row items-start`}>
+                        <ReserveSection section={boardSetup[BoatPosition.RESERVE]}
+                            onAddPaddler={onAddPaddler} 
+                            // open={reserveOpen}
+                            // onOpenChange={setReserveOpen}
+                            // onItemPointerDown={() => { reserveCloseRequestedRef.current = true }}
+                            // collapsed={reserveCollapsed}
+                            // onCollapsedChange={setReserveCollapsed}
+                        />
                         <ConfigSection boardSetup={boardSetup} boatType={race.boatType} onButtonClick={putOnReserve} />
                     </div>
+                    {/* <CustomDragLayer /> */}
                 </DragDropContext>
             )}
         </div>

@@ -1,10 +1,10 @@
-import {DrummerSection} from "./sections/DrummerSection";
-import {SweepSection} from "./sections/SweepSection";
-import {PaddleSection} from "./sections/PaddleSection";
-import HorizontalLineGauge from "../complex/gauge/HorizontalLineGauge";
-import { BoatPosition } from "../../enums/BoatConstant";
 import { useSetupState } from "../../context/SetupContext";
+import { BoatPosition } from "../../enums/BoatConstant";
+import HorizontalLineGauge from "../complex/gauge/HorizontalLineGauge";
 import VerticalLineGauge from "../complex/gauge/VerticalLineGauge";
+import { DrummerSection } from "./sections/DrummerSection";
+import { PaddleSection } from "./sections/PaddleSection";
+import { SweepSection } from "./sections/SweepSection";
 
 type Props = {
     boardSetup: any
@@ -27,10 +27,11 @@ export default function ConfigSection({boardSetup, boatType, onButtonClick = nul
         <div className={`flex flex-col items-center pl-8 gap-3`}>
 
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
                 <div className={`flex flex-col gap-2`}>
                     <HorizontalLineGauge
                         value={checkBoatBalance(boardSetup, boatType)?.sideBalance.value}
+                        GHeight={8}
                         toleranceMin={-state.settings.sideWeightTolerance}
                         toleranceMax={state.settings.sideWeightTolerance}
                     />
@@ -43,6 +44,8 @@ export default function ConfigSection({boardSetup, boatType, onButtonClick = nul
                 </div>
                 <VerticalLineGauge
                     value={checkBoatBalance(boardSetup, boatType)?.lineBalance.value}
+                    GWidth={8}
+                    GHeight={400}
                     toleranceMin={-state.settings.lineWeightTolerance}
                     toleranceMax={state.settings.lineWeightTolerance}
                 />

@@ -1,21 +1,15 @@
-import React, {useContext, useEffect, useState} from "react";
-import {DragDropContext} from "react-beautiful-dnd";
-import BoatContext from "../context/BoatContext";
+import { useEffect, useState } from "react";
+import { DragDropContext } from "react-beautiful-dnd";
+import { DrummerSection } from "../components/board/sections/DrummerSection";
+import { PaddleSection } from "../components/board/sections/PaddleSection";
+import { ReserveSection } from "../components/board/sections/ReserveSection";
+import { SweepSection } from "../components/board/sections/SweepSection";
 import DraggablePaddler from "../components/complex/drag-and-drop/DraggablePaddler";
 import DroppablePosition from "../components/complex/drag-and-drop/DroppablePosition";
-import {BoatPosition, BoatSize} from "../enums/BoatConstant";
-import {calculateLineBalance, calculateSideBalance} from "../utils/WeightCalculator";
-import {getItems, move, reorder} from "../utils/ConfigurationHelper";
-import LinearGauge from "../components/complex/gauge/LinearGauge";
-import {useSetupState} from "../context/SetupContext";
-import {DragAndDrop} from "../components/complex/drag-and-drop/DragAndDrop";
-import DroppableSection from "../components/complex/drag-and-drop/DroppableSection";
-import {DrummerSection} from "../components/board/sections/DrummerSection";
-import {ReserveSection} from "../components/board/sections/ReserveSection";
-import {SweepSection} from "../components/board/sections/SweepSection";
-import {LeftPaddleSection} from "../components/board/sections/LeftPaddleSection";
-import {RightPaddleSection} from "../components/board/sections/RightPaddleSection";
-import {PaddleSection} from "../components/board/sections/PaddleSection";
+import { useSetupState } from "../context/SetupContext";
+import { BoatPosition, BoatSize } from "../enums/BoatConstant";
+import { getItems, move, reorder } from "../utils/ConfigurationHelper";
+import { calculateLineBalance, calculateSideBalance } from "../utils/WeightCalculator";
 
 
 export default function BoatConfiguration() {
@@ -132,12 +126,14 @@ export default function BoatConfiguration() {
         <div className={`w-full flex justify-center`}>
             <div className={`w-full flex justify-center relative`}>
                 <DragDropContext onDragEnd={onDragEnd}>
-                    <ReserveSection section={boatSetup[BoatPosition.RESERVE]}/>
-                    <div className={`flex flex-col items-center gap-3`}>
-                        <DrummerSection section={boatSetup[BoatPosition.DRUMMER]}/>
-                        <PaddleSection leftSection={boatSetup[BoatPosition.LEFT]}
-                                       rightSection={boatSetup[BoatPosition.RIGHT]}/>
-                        <SweepSection section={boatSetup[BoatPosition.SWEEP]}/>
+                    <div className={`flex flex-row`}>
+                        <ReserveSection section={boatSetup[BoatPosition.RESERVE]}/>
+                        <div className={`flex flex-col items-center gap-3`}>
+                            <DrummerSection section={boatSetup[BoatPosition.DRUMMER]}/>
+                            <PaddleSection leftSection={boatSetup[BoatPosition.LEFT]}
+                                        rightSection={boatSetup[BoatPosition.RIGHT]}/>
+                            <SweepSection section={boatSetup[BoatPosition.SWEEP]}/>
+                        </div>
                     </div>
                 </DragDropContext>
 

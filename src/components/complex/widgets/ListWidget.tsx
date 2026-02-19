@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { logger } from "../../../common/helpers/logger";
 import { Chevron } from "../../basic/svg/Chevron";
 
@@ -13,7 +13,7 @@ type Props = {
 
 export function ListWidget({
                                label,
-                               selectedIndex = -1,
+                               selectedIndex,
                                selectedColor = "bg-teal-100",
                                widgetClassName,
                                items,
@@ -21,25 +21,27 @@ export function ListWidget({
                                ...props
                            }: Props) {
 
-    const [isExpanded, setIsExpanded] = useState(true)
-    const [index, setIndex] = useState<number | null>(selectedIndex)
+    const [isExpanded, setIsExpanded] = useState(selectedIndex < 0)
+    // const [index, setIndex] = useState<number | null>(selectedIndex)
 
-    useEffect(() => {
-        if (index !== null && setSelection) {
-            setIsExpanded(false)
-            setSelection(items[index])
-        }
-    }, [index, items, setSelection])
+    // useEffect(() => {
+    //     if (index !== null && setSelection) {
+    //         setIsExpanded(false)
+    //         setSelection(items[index])
+    //     }
+    // }, [index, items, setSelection])
+
+    logger.debug("Rendering ListWidget with items", selectedIndex, isExpanded);
 
     return (
         <div className={`
-            w-[20rem] rounded-lg ring-1 overflow-hidden
+            w-[22rem] rounded-lg ring-1 overflow-hidden
             ${widgetClassName}
         `}>
             <div className={`relative p-3`}>
-                <h1 className={`text-lg font-medium`}>{label}</h1>
-                <p className={`text-xs font-base`}>
-                    Selected: {index !== null && index >= 0 ? items[index] : "None"}
+                <h1 className={`text-sm text-gray-500 font-medium`}>{label}</h1>
+                <p className={`text-sm`}>
+                    Selected: {selectedIndex >= 0 ? items[selectedIndex] : "None"}
                 </p>
                 <div className={`
                     absolute right-3 top-3 rounded-full hover:bg-gray-100 p-2
@@ -56,11 +58,12 @@ export function ListWidget({
                     <div key={idx}
                          className={`
                             group relative flex items-center h-10 px-3 py-2 cursor-pointer
-                            ${index === idx ? selectedColor : "hover:bg-gray-100"}
+                            ${selectedIndex=== idx ? selectedColor : "hover:bg-gray-100"}
                         `}
                          onClick={() => {
                             logger.debug("Selected item", str, "at index", idx + 1)
-                            setIndex(idx)
+                            setSelection(str)
+                            // setIndex(idx)
                          }}
                          title={str}
                     >

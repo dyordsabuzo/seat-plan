@@ -69,6 +69,16 @@ export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedR
             }), race.boatType)
             race.configs = [config];
             logger.debug("Updated race configurations", race.configs)
+        } else {
+            logger.debug("Painting board with config index", configIndex);
+            if (race.configs.length <= configIndex) {
+                const config = initialiseBoard(race.paddlers.map((p: any) => {
+                    // const content = showWeights ? `${p.name} (${p.weight})` : p.name
+                    const content = `${p.name} (${p.weight})`;
+                    return {...p, content: content}
+                }), race.boatType)
+                race.configs.push(config);
+            }
         }
     }
 
@@ -146,6 +156,26 @@ export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedR
                     ...configNames,
                     `Config ${configNames.length + 1}`
                 ])}
+                onDeleteConfig={(index) => {
+                    // remove config at index and update state and regatta
+                    try {
+                        const newConfigs = [...race.configs.slice(0, index), ...race.configs.slice(index + 1)]
+                        race.configs = newConfigs
+                        // update config names
+                        const newNames = newConfigs.length === 0 ? ["Config 1"] : newConfigs.map((_, i) => `Config ${i + 1}`)
+                        setConfigNames(newNames)
+                        // adjust selected index
+                        setSelectedConfigIndex(prev => {
+                            if (prev === null) return null
+                            if (prev === index) return null
+                            return prev > index ? prev - 1 : prev
+                        })
+                        // persist via regatta context
+                        updateRaceConfig(race)
+                    } catch (e) {
+                        console.debug('Failed to delete config', e)
+                    }
+                }}
             />
                 
             {boardSetup && (
@@ -178,7 +208,7 @@ export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedR
                             }}
                     onDragEnd={onDragEnd}
                 >
-                    <div className={`flex flex-col sm:flex-row items-start`}>
+                    <div className={`w-full flex flex-col sm:flex-row`}>
                         <ReserveSection section={boardSetup[BoatPosition.RESERVE]}
                             onAddPaddler={onAddPaddler} 
                             // open={reserveOpen}

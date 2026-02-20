@@ -38,7 +38,7 @@ export default function VerticalLineGauge({
         const posRaw = percentMax - ratio * (percentMax - percentMin)
 
         const posClamped = Math.max(0, Math.min(100, posRaw))
-        const labelPos = Math.max(0, Math.min(100, posClamped + 2))
+        const labelPos = Math.max(0, Math.min(100, posClamped))
 
         return { pos: `${posClamped}%`, labelPos: `${labelPos}%` }
     }
@@ -47,7 +47,8 @@ export default function VerticalLineGauge({
 
     return (
         <div className={`flex items-center gap-3`}>
-            <svg width={GWidth} height={GHeight}>
+            <div style={{position: 'relative', width: GWidth, height: GHeight}}>
+                <svg width={GWidth} height={GHeight}>
                 <defs>
                     <linearGradient id={`grad-${id}`} x1="0%" y1="0%" x2="0%" y2="100%" spreadMethod="pad">
                         <stop offset="0%" stopColor="#ff2400" stopOpacity="1"></stop>
@@ -69,11 +70,10 @@ export default function VerticalLineGauge({
                           strokeWidth={3}
                           stroke="black" />
                 </g>
-            </svg>
+                </svg>
 
-            <div style={{height: GHeight, position: 'relative'}}>
-                <div style={{position: 'absolute', top: labelPos, transform: 'translateY(-50%)'}}>
-                    <span className={`text-sm`}>{textValue}</span>
+                <div style={{position: 'absolute', top: labelPos, left: '100%', transform: 'translate(-50%, -50%)', zIndex: 2, pointerEvents: 'none'}}>
+                    <span className={`text-xs bg-white p-1 rounded border font-semibold`}>{textValue.replace(' ', '')}</span>
                 </div>
             </div>
         </div>

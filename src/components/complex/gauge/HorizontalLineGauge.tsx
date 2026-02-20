@@ -50,16 +50,11 @@ export default function HorizontalLineGauge({
                           stroke="white"></line>
                 </g>
             </svg>
-            <svg width={"100%"} height={20}>
-                <g>
-                    <text
-                        x={calcPos().labelPos}
-                        y={"80%"}
-                    >
-                        <tspan className={`text-sm`}>{textValue}</tspan>
-                    </text>
-                </g>
-            </svg>
+            <div style={{width: '100%', height: 20, position: 'relative'}}>
+                <div style={{position: 'absolute', left: calcPos().labelPos, top: '50%', transform: 'translate(-20%, -50%)'}}>
+                    <span className={`text-xs bg-white px-2 py-0.5 rounded font-semibold border`}>{String(textValue).replace(' ', '')}</span>
+                </div>
+            </div>
         </div>
     )
 }

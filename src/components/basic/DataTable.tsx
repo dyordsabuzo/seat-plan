@@ -1,4 +1,4 @@
-import React, {useState} from 'react'
+import React, { useState } from 'react';
 
 type Option = { value: string; label: string }
 
@@ -11,6 +11,8 @@ export type Column<T> = {
     width?: string
     sortable?: boolean
     filterable?: boolean
+    // when true, the column is only shown while a row is in edit mode
+    showOnEditOnly?: boolean
     render?: (row: T) => React.ReactNode
 }
 
@@ -104,7 +106,7 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
                     <tr>
                         {columns.map((col, idx) => (
                             <th key={idx} className={`px-4 py-2 text-left text-xs font-medium text-gray-500 ${col.sortable ? 'cursor-pointer select-none' : ''}`} style={{width: col.width}} onClick={() => toggleSort(String(col.key), col.sortable)}>
-                                <div className={`flex items-center gap-2`}>{col.title}
+                                <div className={`flex items-center gap-2`}>{(col.showOnEditOnly && !editingId) ? '' : col.title}
                                     {sortBy.key === String(col.key) && sortBy.direction === 'asc' && <span>▲</span>}
                                     {sortBy.key === String(col.key) && sortBy.direction === 'desc' && <span>▼</span>}
                                 </div>
@@ -117,7 +119,7 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
                     <tr>
                         {columns.map((col, idx) => (
                             <th key={idx} className={`px-2 py-1 text-left text-xs font-medium text-gray-500`}> 
-                                {col.filterable ? (
+                                {(!col.showOnEditOnly || editingId) && col.filterable ? (
                                     col.inputType === 'select' && col.options ? (
                                         <select className={`border rounded p-1 text-sm w-full`} value={filters[String(col.key)] ?? ''} onChange={e => setFilterValue(String(col.key), e.target.value)}>
                                             <option value="">(any)</option>
@@ -145,6 +147,10 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
                         return (
                             <tr key={String(key) || rIdx}>
                                 {columns.map((col, cIdx) => {
+                                    // hide columns that are show-on-edit-only when not editing
+                                    if (!isEditing && col.showOnEditOnly) {
+                                        return <td key={cIdx} className={`px-4 py-2 text-sm text-gray-700`}></td>
+                                    }
                                     const field = col.key as string
                                     const value = row[field]
                                     if (isEditing && col.editable) {

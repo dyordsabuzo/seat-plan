@@ -25,10 +25,10 @@ export function ReserveSection({section, onAddPaddler}: Props) {
         : (regatta && Array.isArray(regatta.paddlers) ? regatta.paddlers.map((p: any) => ({ ...(p || {}), id: p.id || `p-${String(p.name || Date.now())}`, content: p.name })) : [])
 
     return (
-        <>
+        <div>
             {/* Toggle button for small screens */}
             <button
-                className="sm:hidden fixed bottom-4 right-4 z-50 bg-blue-600 text-white px-3 py-2 rounded shadow-lg"
+                className="sm:hidden fixed bottom-0 left-0 z-50 bg-blue-600 text-white px-3 py-2 rounded-tr shadow-lg text-sm"
                 onClick={() => setPanelOpen(true)}
                 aria-label="Open reserves"
             >
@@ -41,26 +41,27 @@ export function ReserveSection({section, onAddPaddler}: Props) {
             )}
 
             <div
-                className={`ring-1 p-2 rounded-lg z-50 transform transition-transform duration-300 ease-out
-                    fixed top-0 right-0 h-full w-11/12 max-w-xs bg-white shadow-lg overflow-auto modern-scroll
-                    ${panelOpen ? 'translate-x-0' : 'translate-x-full'}
-                        sm:static sm:translate-x-0 sm:h-auto sm:w-auto sm:max-w-none sm:shadow-none sm:bg-transparent sm:overflow-visible`}
-                    >
+                className={`ring-1 p-2 rounded-tr sm:rounded-md z-50 transform transition-transform duration-300 ease-out
+                    fixed bottom-0 -left-1 w-5/12 sm:w-11/12 max-w-xs bg-white shadow-lg overflow-auto modern-scroll
+                    ${panelOpen ? 'translate-x-0' : '-translate-x-full'}
+                    sm:static sm:translate-x-0 sm:h-auto sm:w-auto sm:max-w-none sm:shadow-none sm:bg-transparent sm:overflow-visible`}
+            >
                 <div className="flex items-center justify-between"> 
                     <h1 className={`text-sm font-medium py-2`}>Reserves: {reserveItems?.length ?? 0}</h1>
                     <div className="flex items-center gap-2">
-                        <button onClick={() => setOpen(true)} className={`text-sm bg-blue-500 text-white px-2 py-1 rounded`}>Add</button>
+                        {/* <button onClick={() => setOpen(true)} className={`text-sm bg-blue-500 text-white px-2 py-1 rounded`}>Add</button> */}
                         <button className="sm:hidden text-gray-600 px-2 py-1" onClick={() => setPanelOpen(false)} aria-label="Close reserves">✕</button>
                     </div>
                 </div>
 
-                <DroppableSection section={reserveItems}
-                                  id={BoatPosition.RESERVE}
-                                  sectionClassName={`h-[70vh] overflow-auto modern-scroll`}
+                <DroppableSection
+                    section={reserveItems}
+                    id={BoatPosition.RESERVE}
+                    sectionClassName={`sm:max-h-[70vh] min-h-[120px] overflow-auto modern-scroll mb-4`}
                 />
 
                 <AddPaddlerModal open={open} onClose={() => setOpen(false)} onAdd={handleAdd} />
             </div>
-        </>
+        </div>
     )
 }

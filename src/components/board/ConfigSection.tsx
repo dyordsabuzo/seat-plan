@@ -24,32 +24,28 @@ export default function ConfigSection({boardSetup, boatType, onButtonClick = nul
     // }, [boardSetup])
 
     return (
-        <div className={`flex flex-col items-center pl-8 gap-3`}>
-
-
-            <div className="flex gap-3">
-                <div className={`flex flex-col gap-2`}>
-                    <HorizontalLineGauge
-                        value={checkBoatBalance(boardSetup, boatType)?.sideBalance.value}
-                        GHeight={8}
-                        toleranceMin={-state.settings.sideWeightTolerance}
-                        toleranceMax={state.settings.sideWeightTolerance}
-                    />
-                    <DrummerSection section={boardSetup[BoatPosition.DRUMMER]} onButtonClick={onButtonClick}/>
-                    <PaddleSection leftSection={boardSetup[BoatPosition.LEFT]}
-                                rightSection={boardSetup[BoatPosition.RIGHT]}
-                                onButtonClick={onButtonClick}
-                                />
-                    <SweepSection section={boardSetup[BoatPosition.SWEEP]} onButtonClick={onButtonClick}/>
-                </div>
-                <VerticalLineGauge
-                    value={checkBoatBalance(boardSetup, boatType)?.lineBalance.value}
-                    GWidth={8}
-                    GHeight={400}
-                    toleranceMin={-state.settings.lineWeightTolerance}
-                    toleranceMax={state.settings.lineWeightTolerance}
+        <div className="flex justify-center gap-6 pt-2">
+            <div className={`flex flex-col gap-2`}>
+                <HorizontalLineGauge
+                    value={checkBoatBalance(boardSetup, boatType)?.sideBalance.value}
+                    GHeight={8}
+                    toleranceMin={-state.settings.sideWeightTolerance}
+                    toleranceMax={state.settings.sideWeightTolerance}
                 />
+                <DrummerSection section={boardSetup[BoatPosition.DRUMMER]} onButtonClick={onButtonClick}/>
+                <PaddleSection leftSection={boardSetup[BoatPosition.LEFT]}
+                            rightSection={boardSetup[BoatPosition.RIGHT]}
+                            onButtonClick={onButtonClick}
+                            />
+                <SweepSection section={boardSetup[BoatPosition.SWEEP]} onButtonClick={onButtonClick}/>
             </div>
+            <VerticalLineGauge
+                value={checkBoatBalance(boardSetup, boatType)?.lineBalance.value}
+                GWidth={8}
+                GHeight={400}
+                toleranceMin={-state.settings.lineWeightTolerance}
+                toleranceMax={state.settings.lineWeightTolerance}
+            />
         </div>
     );
 }

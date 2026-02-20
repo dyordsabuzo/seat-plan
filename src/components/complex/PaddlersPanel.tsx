@@ -82,10 +82,12 @@ const PaddlersPanel: React.FC = () => {
                 rowKey={'id'}
                 columns={
                     ([
-                        {key: 'id', title: 'ID', sortable: true, filterable: false},
-                        {key: 'name', title: 'Name', editable: true, inputType: 'text', sortable: true, filterable: false},
-                        {key: 'gender', title: 'Gender', editable: true, inputType: 'select', options: [{value: 'M', label: 'M'}, {value: 'F', label: 'F'}, {value: 'O', label: 'Other'}], sortable: true, filterable: false},
-                    ] as Column<Paddler>[])
+                            {key: 'id', title: 'ID', sortable: true, filterable: false},
+                            {key: 'name', title: 'Name', editable: true, inputType: 'text', sortable: true, filterable: false},
+                            {key: 'gender', title: 'Gender', editable: true, inputType: 'select', options: [{value: 'M', label: 'M'}, {value: 'F', label: 'F'}, {value: 'O', label: 'Other'}], sortable: true, filterable: false},
+                            {key: 'weight', title: 'Weight (kg)', editable: true, inputType: 'number', sortable: true, filterable: false, showOnEditOnly: true},
+                            {key: 'birthdate', title: 'DOB', editable: true, inputType: 'date', sortable: true, filterable: false, showOnEditOnly: true},
+                        ] as Column<Paddler>[])
                     .concat((regatta.races || []).map((race: Race) => ({
                         key: `race_${race.id}`,
                         title: `${race.category}-${race.type}-${race.distance}-${race.boatType}`,

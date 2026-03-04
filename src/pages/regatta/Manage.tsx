@@ -1,15 +1,17 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { logger } from "../../common/helpers/logger";
 import Breadcrumb from "../../components/basic/Breadcrumb";
 import { useRegattaState } from "../../context/RegattaContext";
 // import Tabs from "../../refactor/Tabs";
 import { useNavigate } from "react-router-dom";
 import Container from '../../components/basic/Container';
-import PaddlersPanel from '../../components/complex/PaddlersPanel';
 import RacesPanel from '../../components/complex/RacesPanel';
+import { Tabs } from '../../components/ui';
+import PaddlersPanel from '../../features/regatta/PaddlersPanel';
 
 const Manage: React.FC = () => {
     const {state: regatta} = useRegattaState();
+    const [activeTab, setActiveTab] = useState<'races' | 'allocations'>('races')
 
     const navigate = useNavigate()
 
@@ -47,9 +49,9 @@ const Manage: React.FC = () => {
                         <div className="mb-4 max-w-[900px]">
                             <Breadcrumb items={[{label: 'Home', to: '/'}]} title="Regatta management" backPath={'/'} />
                         </div>
-                        <h1 className={`text-2xl font-semibold`}>Regatta management</h1>
+                        <h1 className={`text-2xl font-semibold`}>{regatta.name}</h1>
                         <p className={`text-sm text-gray-500`}>Manage races and race allocations</p>
-                        <p className={`text-sm text-gray-900 font-semibold py-2`}>{regatta.name}</p>
+                        {/* <p className={`text-sm text-gray-900 font-semibold py-2`}>{regatta.name}</p> */}
                     </div>
                     <div className="">
                         <button onClick={() => {
@@ -58,10 +60,21 @@ const Manage: React.FC = () => {
                     </div>
                 </header>
                 <div>
-                    <RacesPanel />
-                </div>
-                <div className="my-6">
-                    <PaddlersPanel />
+                    <div className="flex items-center justify-between mb-4">
+                        <Tabs
+                            items={[{ key: 'races', label: 'Races' }, { key: 'allocations', label: 'Allocations' }]}
+                            activeKey={activeTab}
+                            onChange={(k) => setActiveTab(k as 'races' | 'allocations')}
+                        />
+                    </div>
+
+                    <div id="tabpanel-races" role="tabpanel" aria-labelledby="tab-races" hidden={activeTab !== 'races'}>
+                        <RacesPanel />
+                    </div>
+
+                    <div id="tabpanel-allocations" role="tabpanel" aria-labelledby="tab-allocations" hidden={activeTab !== 'allocations'} className="my-6">
+                        <PaddlersPanel />
+                    </div>
                 </div>
 
             </Container>

@@ -1,4 +1,4 @@
-import { Draggable } from 'react-beautiful-dnd';
+import { Draggable } from '../components/DragDropWrappers';
 
 type PaddlerProps = {
     paddler: any,
@@ -11,12 +11,13 @@ const Paddler: React.FC<PaddlerProps> = ({ paddler, index, draggable }) => {
     return (
         <div>
             {draggable && (
-                <Draggable draggableId={paddler.id} index={index}>
+                <Draggable draggableId={String(paddler.id)} index={index}>
                     {(provided, snapshot) => (
                         <div
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                             ref={provided.innerRef}
+                            style={{ ...(provided.draggableProps.style as any) }}
                             className={`border border-solid border-black 
                                 rounded-md p-px px-2 transition-all
                                 ${snapshot.isDragging ? "bg-slate-300" : "bg-white"}

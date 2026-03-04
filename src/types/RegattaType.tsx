@@ -24,6 +24,8 @@ export type Paddler = {
     weight?: number,
     gender?: string,
     birthdate?: string,
+    category?: string,
+    preferredSide?: string,
     content?: string, // for board display purposes
 }
 

@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { DragDropContext } from "react-beautiful-dnd";
-import { BoatLabel, BoatPosition, BoatSize } from "../../enums/BoatConstant";
+import { BoatPosition, BoatSize } from "../../enums/BoatConstant";
 // import {calculateLineBalance, calculateSideBalance} from "../../utils/WeightCalculator";
 import { logger } from "../../common/helpers/logger";
 import { useRegattaState } from '../../context/RegattaContext';
-import { Race } from "../../types/RegattaType";
-import { getItems, move, reorder } from "../../utils/ConfigurationHelper";
+import { Paddler, Race } from "../../types/RegattaType";
+import { getItems } from "../../utils/ConfigurationHelper";
 // import CustomDragLayer from "../complex/drag-and-drop/CustomDragLayer";
 // import { setCurrentDragging } from "../complex/drag-and-drop/DragItemRegistry";
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import { BoatStructure } from "../boat/BoatStructure";
 import { HeaderButtonsWidget } from "../complex/widgets/HeaderButtonsWidget";
-import ConfigSection from "./ConfigSection";
-import { ReserveSection } from "./sections/ReserveSection";
 
 const initialiseBoard = (paddlers: any, boatType) => {
-    const boatSize = BoatSize[boatType.toUpperCase()]
+    const boatSize = BoatSize[boatType.toUpperCase()];
 
     return [
         getItems(1, 0, "scratch"),
@@ -22,26 +22,21 @@ const initialiseBoard = (paddlers: any, boatType) => {
         getItems(boatSize, boatSize, "left"),
         getItems(boatSize, boatSize, "right"),
         getItems(1, 1, "sweep")
-    ]
+    ];
 }
 
 type Props = {
     race: Race,
-    onUpdateConfig?: (index, config) => void,
+    onUpdateConfig?: (index: number | null, config: any) => void,
     onAddPaddler?: (paddler: any) => void,
     selectedRace?: string
 }
 
-export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedRace}: Props) {
-    const [selectedConfigIndex, setSelectedConfigIndex] = useState(null)
-    const [, setReserveCollapsed] = useState(false)
-    const reserveCloseRequestedRef = useRef(false)
-    const reserveCloseTimerRef = useRef<number | null>(null)
+export default function RaceBoard({race}: Props) {
+    const boardRef = useRef<HTMLDivElement | null>(null)
+    const [selectedConfigIndex, setSelectedConfigIndex] = useState<number | null>(null)
     const [configNames, setConfigNames] = useState<string[]>(race.configs.length < 2 ? ["Config 1"] : race.configs.map((_, index) => `Config ${index + 1}`))
     const [boardSetup, setBoardSetup] = useState<any>(null)
-    // const [showWeights, setShowWeights] = useState(true)
-    // const {setting, setSetting} = useSetupState();
-
     const {updateRaceConfig} = useRegattaState()
 
     useEffect(() => {
@@ -49,35 +44,45 @@ export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedR
         setConfigNames(race.configs.length === 0 ? ["Config 1"] : race.configs.map((_, index) => `Config ${index + 1}`));
         return () => {};
     }, [race]);
-    
-    useEffect(() => {
-        logger.debug("PRE Board setup changed", boardSetup, selectedConfigIndex, race);
-        race.configs[selectedConfigIndex] = boardSetup;
-        updateRaceConfig(race);
-        logger.debug("POST Board setup changed", boardSetup, selectedConfigIndex, race);
-        return () => {};
-    // eslint-disable-next-line 
-    }, [boardSetup]);
 
     const paintRaceConfig = (configIndex: number) => {
         if (race.configs.length < 1) {
-            logger.debug("Empty race configurations", race.configs, configIndex)
-            const config = initialiseBoard(race.paddlers.map((p: any) => {
-                // const content = showWeights ? `${p.name} (${p.weight})` : p.name
-                const content = `${p.name} (${p.weight})`;
-                return {...p, content: content}
-            }), race.boatType)
+            const config = initialiseBoard(race.paddlers, race.boatType)
             race.configs = [config];
-            logger.debug("Updated race configurations", race.configs)
         } else {
-            logger.debug("Painting board with config index", configIndex);
+            logger.debug("Painting existing config", boardSetup, race)
+            if (boardSetup) {
+                boardSetup.map((group: Paddler[]) => {
+                    return group.map((item: Paddler) => {
+                        return race.paddlers.find((p: Paddler) => p.id === item.id) || item;
+                    });
+                });
+            }
+
             if (race.configs.length <= configIndex) {
-                const config = initialiseBoard(race.paddlers.map((p: any) => {
-                    // const content = showWeights ? `${p.name} (${p.weight})` : p.name
-                    const content = `${p.name} (${p.weight})`;
-                    return {...p, content: content}
-                }), race.boatType)
+                const config = boardSetup;
                 race.configs.push(config);
+            } else {
+                let paddlers = race.paddlers;
+                let config = race.configs[configIndex];
+                if (typeof config === "string") {
+                    config = JSON.parse(config);
+                }
+
+                race.configs[configIndex] = config.map((group: Paddler[], index:number) => {
+                    if (index !== BoatPosition.RESERVE) {
+                        return group.map((item: Paddler) => {
+                            const paddler = paddlers.find((p: Paddler) => String(p.id) === String(item.id))
+                            if (!paddler) {
+                                return item;
+                            }
+                            paddlers = paddlers.filter((p: Paddler) => String(p.id) !== String(item.id))
+                            return paddler
+                        });
+                    }
+                    return group;
+                });
+                race.configs[configIndex][BoatPosition.RESERVE] = paddlers;
             }
         }
     }
@@ -86,141 +91,90 @@ export default function RaceBoard({race, onUpdateConfig, onAddPaddler, selectedR
         if (selectedConfigIndex !== null) {
             logger.debug("Selected config index changed", selectedConfigIndex, race)            
             paintRaceConfig(selectedConfigIndex);
+
+            let config = race.configs[selectedConfigIndex].map(config => {
+                if (typeof config === "string") return JSON.parse(config);
+                return config;
+            });
+            setBoardSetup(config);
+        } else {
+            setBoardSetup(null);
         }
-        setBoardSetup(race.configs[selectedConfigIndex]);
     // eslint-disable-next-line 
     }, [selectedConfigIndex]);
 
-    const onDragEnd = (result: any) => {
-        const {source, destination} = result;
-
-        // dropped outside the list
-        if (!destination) {
-            return;
+    const exportConfigAsPDF = async (index: number | null) => {
+        if (selectedConfigIndex === null || !boardRef.current) {
+            alert('Please select a configuration to export')
+            return
         }
-        // ensure reserve is restored after drag completes
+
         try {
-            if (reserveCloseTimerRef.current) {
-                window.clearTimeout(reserveCloseTimerRef.current)
-                reserveCloseTimerRef.current = null
-            }
-        } catch (e) {}
-        setReserveCollapsed(false)
-        // try { setCurrentDragging(null) } catch (e) {}
-        const sInd = +source.droppableId;
-        const dInd = +destination.droppableId;
+            // Increase scale for better resolution in PDF
+            const canvas = await html2canvas(boardRef.current, { scale: 2, useCORS: true })
+            const imgData = canvas.toDataURL('image/png')
 
-        if (sInd === dInd) {
-            const items = reorder(boardSetup[sInd], source.index, destination.index);
-            const newState: any = [...boardSetup];
-            newState[sInd] = items;
-            onUpdateConfig(selectedConfigIndex, newState)
-            setBoardSetup(newState);
-        } else {
-            const result = move(boardSetup[sInd], boardSetup[dInd], source, destination);
+            // Create PDF with same pixel dimensions as canvas
+            const pdf = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] })
+            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
 
-            const newState = [...boardSetup];
-
-            newState[sInd] = result[sInd];
-            newState[dInd] = result[dInd];
-
-            // put displaced item back to reserved
-            if (result["displaced"]) {
-                newState[BoatPosition.RESERVE.toString()].push(result["displaced"])
-            }
-
-            onUpdateConfig(selectedConfigIndex, newState.filter(group => group.length));
-            setBoardSetup(newState.filter(group => group.length));
+            const fileName = `${race?.type ?? 'race'}-config-${(index ?? 0) + 1}.pdf`
+            pdf.save(fileName)
+        } catch (e) {
+            console.debug('Export as PDF failed', e)
+            alert('Export failed. See console for details.')
         }
     }
 
-    const putOnReserve = (object: any, positionId: number, index: number) => {
-        const newState = [...boardSetup];
-        newState[positionId].splice(index, 1);
-        newState[positionId].splice(index, 0, {
-            id: `empty-${index}-${new Date().getTime()}`,
-            name: BoatLabel.EMPTY_SEAT,
-            content: BoatLabel.EMPTY_SEAT,
-            weight: 0
-        })
-        newState[BoatPosition.RESERVE].splice(0, 0, object)
-        setBoardSetup(newState)
-    }
+    logger.debug("Rendering RaceBoard with race", race);
 
     return (
-        <div className={`flex flex-col`}>
-            <HeaderButtonsWidget names={configNames}
-                clickedIndex={selectedConfigIndex}
-                onClick={setSelectedConfigIndex}
-                addHeaderHandler={() => setConfigNames([
-                    ...configNames,
-                    `Config ${configNames.length + 1}`
-                ])}
-                onDeleteConfig={(index) => {
-                    // remove config at index and update state and regatta
-                    try {
-                        const newConfigs = [...race.configs.slice(0, index), ...race.configs.slice(index + 1)]
-                        race.configs = newConfigs
-                        // update config names
-                        const newNames = newConfigs.length === 0 ? ["Config 1"] : newConfigs.map((_, i) => `Config ${i + 1}`)
-                        setConfigNames(newNames)
-                        // adjust selected index
-                        setSelectedConfigIndex(prev => {
-                            if (prev === null) return null
-                            if (prev === index) return null
-                            return prev > index ? prev - 1 : prev
-                        })
-                        // persist via regatta context
-                        updateRaceConfig(race)
-                    } catch (e) {
-                        console.debug('Failed to delete config', e)
-                    }
-                }}
-            />
+        <div className={`flex flex-col`} ref={boardRef}>
+            <div className="flex items-center justify-between">
+                <HeaderButtonsWidget names={configNames}
+                    clickedIndex={selectedConfigIndex}
+                    onClick={setSelectedConfigIndex}
+                    exportPdf={() => exportConfigAsPDF(selectedConfigIndex)}
+                    addHeaderHandler={() => setConfigNames([
+                        ...configNames,
+                        `Config ${configNames.length + 1}`
+                    ])}
+                    onDeleteConfig={(index) => {
+                        // remove config at index and update state and regatta
+                        try {
+                            const newConfigs = [...race.configs.slice(0, index), ...race.configs.slice(index + 1)]
+                            race.configs = newConfigs
+                            // update config names
+                            const newNames = newConfigs.length === 0 ? ["Config 1"] : newConfigs.map((_, i) => `Config ${i + 1}`)
+                            setConfigNames(newNames)
+                            // adjust selected index
+                            setSelectedConfigIndex(prev => {
+                                if (prev === null) return null
+                                if (prev === index) return null
+                                return prev > index ? prev - 1 : prev
+                            })
+                            // persist via regatta context
+                            updateRaceConfig(race)
+                        } catch (e) {
+                            console.debug('Failed to delete config', e)
+                        }
+                    }}
+                />
+            </div>
                 
             {boardSetup && (
-                <DragDropContext
-                            onDragStart={(start) => {
-                                try {
-                                    const sInd = +start.source.droppableId
-                                    if (typeof window !== 'undefined' && window.innerWidth < 640 && sInd === BoatPosition.RESERVE) {
-                                        // close reserve panel on small screens while dragging so config area is exposed
-                                        // Delay the actual close until after the browser paints the initial drag preview
-                                        // so we avoid layout shifts that cause the preview to be offset from the cursor.
-                                        if (reserveCloseRequestedRef.current) {
-                                            // instead of fully hiding the reserve immediately, collapse it
-                                            // so the DOM remains present and the drag preview stays aligned
-                                            setReserveCollapsed(true)
-                                            // also schedule a small timeout to clear the collapsed state
-                                            if (reserveCloseTimerRef.current) {
-                                                window.clearTimeout(reserveCloseTimerRef.current)
-                                            }
-                                            reserveCloseTimerRef.current = window.setTimeout(() => {
-                                                setReserveCollapsed(false)
-                                                reserveCloseTimerRef.current = null
-                                            }, 500)
-                                        }
-                                        reserveCloseRequestedRef.current = false
-                                    }
-                                } catch (e) {
-                                    // ignore
+                <div className={`w-full flex flex-col sm:flex-row sm:gap-4`}>
+                    <BoatStructure boatType={race.boatType} 
+                        boardSetup={race.configs[selectedConfigIndex]}
+                        updateConfig={
+                            (config) => {
+                                logger.debug("Updating config", {config, selectedConfigIndex})
+                                if (selectedConfigIndex !== null) {
+                                    race.configs[selectedConfigIndex] = config;
+                                    updateRaceConfig(race);
                                 }
-                            }}
-                    onDragEnd={onDragEnd}
-                >
-                    <div className={`w-full flex flex-col sm:flex-row`}>
-                        <ReserveSection section={boardSetup[BoatPosition.RESERVE]}
-                            onAddPaddler={onAddPaddler} 
-                            // open={reserveOpen}
-                            // onOpenChange={setReserveOpen}
-                            // onItemPointerDown={() => { reserveCloseRequestedRef.current = true }}
-                            // collapsed={reserveCollapsed}
-                            // onCollapsedChange={setReserveCollapsed}
-                        />
-                        <ConfigSection boardSetup={boardSetup} boatType={race.boatType} onButtonClick={putOnReserve} />
-                    </div>
-                    {/* <CustomDragLayer /> */}
-                </DragDropContext>
+                            }}/>
+                </div>
             )}
         </div>
     );

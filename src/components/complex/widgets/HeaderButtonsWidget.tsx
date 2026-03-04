@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBoardView } from '../../../context/BoardViewContext';
 import { HeaderButton } from "../../basic/buttons/HeaderButton";
 import ConfirmModal from '../modals/ConfirmModal';
 
@@ -6,14 +7,17 @@ type Props = {
     names: string[]
     clickedIndex: number
     onClick: (index: number) => void
+    exportPdf: () => void
     addHeaderHandler: () => void
     onDeleteConfig?: (index: number) => void
 }
 
-export function HeaderButtonsWidget({names, clickedIndex = 0, onClick, addHeaderHandler, onDeleteConfig}: Props) {
+export function HeaderButtonsWidget({names, clickedIndex = 0, onClick, exportPdf, addHeaderHandler, onDeleteConfig}: Props) {
     const [confirmOpen, setConfirmOpen] = React.useState(false)
     const [pendingIndex, setPendingIndex] = React.useState<number | null>(null)
     const [pendingName, setPendingName] = React.useState<string | null>(null)
+
+    const {state, setState} = useBoardView();
 
     const requestDelete = (index: number) => {
         setPendingIndex(index)
@@ -40,7 +44,7 @@ export function HeaderButtonsWidget({names, clickedIndex = 0, onClick, addHeader
 
     return (
         <>
-            <div className={`flex py-4 pb-8 gap-8 items-center`}>
+            <div className={`flex flex-col sm:flex-row pt-4 pb-2 sm:pb-8 gap-2 sm:gap-12 items-start sm:items-center`}>
                 <div className="flex gap-2 border-b">
                     {names.map((name, index) => (
                         <HeaderButton
@@ -54,6 +58,23 @@ export function HeaderButtonsWidget({names, clickedIndex = 0, onClick, addHeader
                             }}
                         />
                     ))}
+                    <label className="flex items-center gap-1 text-xs cursor-pointer px-3">
+                        <input
+                            type="checkbox"
+                            checked={state.settings.showWeights}
+                            onChange={() =>
+                                setState({
+                                    ...state,
+                                    settings: {
+                                        ...state.settings,
+                                        showWeights: !state.settings.showWeights,
+                                    },
+                                })
+                            }
+                            className="accent-blue-600 h-4 w-4 rounded border border-blue-200 focus:ring-2 focus:ring-blue-400"
+                        />
+                        <span className="select-none">Show weights</span>
+                    </label>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -62,11 +83,11 @@ export function HeaderButtonsWidget({names, clickedIndex = 0, onClick, addHeader
                                     px-2 py-1 text-center
                                     text-blue-600
                                     border border-blue-200
-                                    ${names.length >= 3 ? "cursor-not-allowed" : ""}
+                                    ${names.length >= state.settings.maxConfig ? "cursor-not-allowed" : ""}
                                 `}
                         onClick={() => addHeaderHandler()}
                         type={"button"}
-                        disabled={names.length >= 3}
+                        disabled={names.length >= state.settings.maxConfig}
                     >
                         +Add Config
                     </button>
@@ -84,8 +105,21 @@ export function HeaderButtonsWidget({names, clickedIndex = 0, onClick, addHeader
                         }}
                         type="button"
                     >
-                        Delete Config
+                        -Delete Config
                     </button>
+
+                        {/* <button 
+                            className={`
+                                rounded-md text-xs 
+                                px-2 py-1 text-center text-red-600 
+                                border border-red-200
+                            `}
+                            onClick={() => exportPdf()}
+                            >
+                                Export PDF
+                    </button> */}
+
+                    
                 </div>
             </div>
 

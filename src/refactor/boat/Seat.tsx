@@ -1,7 +1,7 @@
-import Paddler from '../Paddler';
-import { Droppable } from 'react-beautiful-dnd';
-import { useState, useEffect, useContext } from 'react';
+import { useContext, useEffect, useState } from 'react';
+import { Droppable } from '../../components/DragDropWrappers';
 import BoatContext from '../../context/BoatContext';
+import Paddler from '../Paddler';
 
 type SeatType = {
     seat: string,

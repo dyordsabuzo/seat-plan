@@ -1,4 +1,4 @@
-import {BoatPosition} from "../enums/BoatConstant";
+import { BoatPosition } from "../enums/BoatConstant";
 
 const frontBackFactor = [
     6, 4.5, 3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5, -4.5, -6
@@ -91,7 +91,7 @@ const sideWeightFactor = [
 ];
 
 export function calculateSideBalance(boat: any, settings: any = {}) {
-    if (boat.length === 1) {
+    if (!boat || boat.length === 1) {
         return 0;
     }
 
@@ -105,8 +105,8 @@ export function calculateSideBalance(boat: any, settings: any = {}) {
 
     for (let i = 0; i < leftPaddlers.length; i++) {
         const factor = (weightFactor[i] / 350)
-        const leftPaddlerWeight = leftPaddlers[i].weight ?? 0
-        const rightPaddlerWeight = rightPaddlers[i].weight ?? 0
+        const leftPaddlerWeight = parseInt(leftPaddlers[i]?.weight ?? 0)
+        const rightPaddlerWeight = parseInt(rightPaddlers[i]?.weight ?? 0)
         value += factor * (rightPaddlerWeight - leftPaddlerWeight);
     }
 
@@ -122,7 +122,7 @@ export function calculateSideBalance(boat: any, settings: any = {}) {
 }
 
 export function calculateLineBalance(boat: any, settings: any = {}) {
-    if (boat.length === 1) {
+    if (!boat || boat.length === 1) {
         return 0;
     }
 
@@ -130,7 +130,7 @@ export function calculateLineBalance(boat: any, settings: any = {}) {
 
     // add drum weight of 14kg on drummer weight
     const defaultDrumWeight = settings.defaultDrumWeight ?? 14
-    const drummerWeight = defaultDrumWeight + (boat[BoatPosition.DRUMMER][0]?.weight ?? 0)
+    const drummerWeight = defaultDrumWeight + (parseInt(boat[BoatPosition.DRUMMER][0]?.weight) ?? 0)
     const weightFactor = settings.lineWeightFactor ?? frontBackFactor
     value += (weightFactor[0] / 6) * (drummerWeight);
 
@@ -140,15 +140,15 @@ export function calculateLineBalance(boat: any, settings: any = {}) {
     for (let i = 0; i < leftPaddlers.length; i++) {
         let weight = 0;
 
-        const leftPaddlerWeight = leftPaddlers[i].weight ?? 0
-        const rightPaddlerWeight = rightPaddlers[i].weight ?? 0
+        const leftPaddlerWeight = parseInt(leftPaddlers[i]?.weight ?? 0)
+        const rightPaddlerWeight = parseInt(rightPaddlers[i]?.weight ?? 0)
         weight = rightPaddlerWeight + leftPaddlerWeight;
         value += (weightFactor[i + 1] / 6) * (weight);
     }
 
     // add sweep oar weight of 7kg on sweep weight
     const defaultSweepWeight = settings.defaultSweepWeight ?? 7
-    const sweepWeight = defaultSweepWeight + (boat[BoatPosition.SWEEP][0]?.weight ?? 0)
+    const sweepWeight = defaultSweepWeight + (parseInt(boat[BoatPosition.SWEEP][0]?.weight) ?? 0)
     value += (weightFactor[weightFactor.length - 1] / 6) * (sweepWeight);
 
     // positive is front heavy, alert if > 15 or < -25

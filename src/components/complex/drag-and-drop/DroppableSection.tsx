@@ -1,4 +1,4 @@
-import {Droppable} from "react-beautiful-dnd";
+import { Droppable } from '../../DragDropWrappers';
 import DraggableItem from "./DraggableItem";
 
 type Props = {
@@ -22,13 +22,11 @@ export default function DroppableSection({
         <div className={mainClassName}>
             <Droppable key={id} droppableId={`${id}`}>
                 {(provided, snapshot) => (
-                    <div className={`
-                        flex flex-col items-center gap-3
-                        ${sectionClassName}
-                        ${snapshot.isDraggingOver ? "bg-[lightblue]" : ""}
-                    `}
-                         ref={provided.innerRef}
-                         {...provided.droppableProps}
+                    <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`flex flex-col items-start gap-3 ${sectionClassName} ${snapshot.isDraggingOver ? "bg-[lightblue]" : ""}`}
+                        style={{ minHeight: Math.max(4, (section?.length ?? 0)) * 56 }}
                     >
                         {section && section.map((item, index) => (
                             <DraggableItem key={item.id}

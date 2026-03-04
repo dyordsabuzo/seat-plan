@@ -1,7 +1,7 @@
-import { Droppable } from "react-beautiful-dnd";
-import { PaddlerType } from "../../../types/PaddlerType";
-import Paddler from "../../../refactor/Paddler";
 import { useEffect, useState } from "react";
+import Paddler from "../../../refactor/Paddler";
+import { PaddlerType } from "../../../types/PaddlerType";
+import { Droppable } from '../../DragDropWrappers';
 
 type SeatDropType = {
     id: string,

@@ -1,8 +1,8 @@
-import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
 import App from './App';
+import { AuthProvider } from './context/AuthContext';
 import { OptionsProvider } from './context/OptionsContext';
+import './index.css';
 import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(
@@ -11,7 +11,9 @@ const root = ReactDOM.createRoot(
 root.render(
     // <React.StrictMode>
     <OptionsProvider>
-        <App />
+        <AuthProvider>
+            <App />
+        </AuthProvider>
     </OptionsProvider>
     // </React.StrictMode>
 );

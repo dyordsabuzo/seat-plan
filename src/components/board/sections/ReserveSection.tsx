@@ -46,10 +46,10 @@ export function ReserveSection({section, onAddPaddler}: Props) {
                     ${panelOpen ? 'translate-x-0' : '-translate-x-full'}
                     sm:static sm:translate-x-0 sm:h-auto sm:w-auto sm:max-w-none sm:shadow-none sm:bg-transparent sm:overflow-visible`}
             >
-                <div className="flex items-center justify-between"> 
+                <div className="flex items-center justify-between pb-2"> 
                     <h1 className={`text-sm font-medium py-2`}>Reserves: {reserveItems?.length ?? 0}</h1>
                     <div className="flex items-center gap-2">
-                        {/* <button onClick={() => setOpen(true)} className={`text-sm bg-blue-500 text-white px-2 py-1 rounded`}>Add</button> */}
+                        {/* <button onClick={() => setOpen(true)} className={`text-sm bg-blue-500 text-white px-2 py-1 rounded`}>+</button> */}
                         <button className="sm:hidden text-gray-600 px-2 py-1" onClick={() => setPanelOpen(false)} aria-label="Close reserves">✕</button>
                     </div>
                 </div>

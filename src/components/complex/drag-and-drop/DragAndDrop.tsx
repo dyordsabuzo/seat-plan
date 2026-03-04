@@ -1,4 +1,4 @@
-import {DragDropContext} from "react-beautiful-dnd";
+import DragDropContextWrapper from '../../DragDropContextWrapper';
 
 type Props = {
     onDragEnd: (result: any) => void
@@ -7,8 +7,8 @@ type Props = {
 
 export function DragAndDrop({onDragEnd, children}: Props) {
     return (
-        <DragDropContext onDragEnd={onDragEnd}>
+        <DragDropContextWrapper onDragEnd={onDragEnd}>
             {children}
-        </DragDropContext>
+        </DragDropContextWrapper>
     )
 }

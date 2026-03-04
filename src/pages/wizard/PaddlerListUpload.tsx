@@ -4,11 +4,13 @@ import { logger } from "../../common/helpers/logger";
 import Breadcrumb from "../../components/basic/Breadcrumb";
 import Container from '../../components/basic/Container';
 import DataTable, { Column } from '../../components/basic/DataTable';
+import { useAuth } from "../../context/AuthContext";
 import { useRegattaState } from "../../context/RegattaContext";
 import { useSetupState } from "../../context/SetupContext";
 import { Regatta } from "../../types/RegattaType";
 import ConfigHelper from '../../utils/ConfigHelper';
 import { processFile } from "../../utils/DataBuilder";
+import * as RegattasStorage from '../../utils/RegattasStorage';
 
 type Paddler = {
     id: string,
@@ -38,6 +40,7 @@ export default function PaddlerListUpload() {
     // DataTable will manage inline editing UI; page provides onSave/onDelete handlers
     
     const navigate = useNavigate()
+    const { user } = useAuth()
     
     // paddlersDisplayed is an array used to render table rows
     const [paddlersDisplayed, setPaddlersDisplayed] = useState<Paddler[]>(() => {
@@ -339,14 +342,26 @@ export default function PaddlerListUpload() {
 
 
 
-                        // persist to localStorage merging into existing 'seatplan.races'
+                        // persist to Firestore (upsert regatta) when signed-in; fallback to localStorage
                         try {
-                            const raw = localStorage.getItem('seatplan.races')
-                            const existing = raw ? JSON.parse(raw) : {}
-                            const merged = {...existing, ...toSaveTree}
-                            localStorage.setItem('seatplan.races', JSON.stringify(merged))
+                            if (user && user.uid) {
+                                try {
+                                    await RegattasStorage.upsertRegatta(user.uid, undefined, toSaveTree)
+                                } catch (e) {
+                                    console.debug('Failed to persist to Firestore, falling back to localStorage', e)
+                                    const raw = localStorage.getItem('seatplan.races')
+                                    const existing = raw ? JSON.parse(raw) : {}
+                                    const merged = {...existing, ...toSaveTree}
+                                    localStorage.setItem('seatplan.races', JSON.stringify(merged))
+                                }
+                            } else {
+                                const raw = localStorage.getItem('seatplan.races')
+                                const existing = raw ? JSON.parse(raw) : {}
+                                const merged = {...existing, ...toSaveTree}
+                                localStorage.setItem('seatplan.races', JSON.stringify(merged))
+                            }
                         } catch (e) {
-                            console.debug('localStorage save failed', e)
+                            console.debug('persist save failed', e)
                         }
 
                         // navigate('/setupboard')

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useState } from 'react'
 import { logger } from '../common/helpers/logger'
 
 type OptionsState = {
@@ -6,7 +6,8 @@ type OptionsState = {
     types: string[]
     distances: string[]
     boatTypes: string[]
-    genders: string[]
+    genders: string[],
+    preferredSides?: string[]
 }
 
 type OptionsContextType = {
@@ -20,7 +21,8 @@ const defaultOptions: OptionsState = {
     types: ["Womens", "Opens", "Mixed"], 
     distances: ["200m", "500m", "1000m", "2000m"], 
     boatTypes: ["Small", "Standard"],
-    genders: ["M", "F"]
+    genders: ["M", "F"],
+    preferredSides: ["Left only", "Right only", "Left preferred", "Right preferred", "No preference"]
 }
 
 const OptionsContext = createContext<OptionsContextType | null>(null)
@@ -36,11 +38,22 @@ export const OptionsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return defaultOptions
     })
 
-    useEffect(() => {
-        try {
-            localStorage.setItem('seatplan.options', JSON.stringify(options))
-        } catch (_) {}
-    }, [options])
+    // const { user } = useAuth()
+
+    // useEffect(() => {
+    //     try {
+    //         if (user && user.uid) {
+    //             // persist under user's document
+    //             const ref = doc(db, 'users', user.uid)
+    //             // use setDoc merge to avoid overwriting other user fields
+    //             setDoc(ref, { options }, { merge: true }).catch(e => logger.debug('Failed to persist options to Firestore', e))
+    //         } else {
+    //             localStorage.setItem('seatplan.options', JSON.stringify(options))
+    //         }
+    //     } catch (e) {
+    //         logger.debug('Failed to persist options', e)
+    //     }
+    // }, [options, user])
 
     const setOptions = (next: Partial<OptionsState>) => {
         setOptionsState(prev => ({ ...prev, ...next }))

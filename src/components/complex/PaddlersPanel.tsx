@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { logger } from '../../common/helpers/logger'
+import { useOptions } from '../../context/OptionsContext'
 import { useRegattaState } from '../../context/RegattaContext'
 import { Paddler, Race } from '../../types/RegattaType'
 import DataTable, { Column } from '../basic/DataTable'
@@ -6,6 +8,7 @@ import AddPaddlerForm from './forms/AddPaddlerForm'
 
 const PaddlersPanel: React.FC = () => {
     const { state: regatta, setState: setRegatta } = useRegattaState()
+    const { options } = useOptions()
     const [showAddPaddler, setShowAddPaddler] = useState(false)
 
     const filtered: Paddler[] = regatta?.paddlers || []
@@ -35,6 +38,7 @@ const PaddlersPanel: React.FC = () => {
                 return {...r, paddlers: existing.filter((e: Paddler) => e.id !== paddlerId)}
             }
         })
+        logger.debug("Toggling allocation for paddler", paddlerId, nextRaces)
         setRegatta(prev => ({...prev, races: nextRaces}))
     }
 
@@ -82,15 +86,19 @@ const PaddlersPanel: React.FC = () => {
                 rowKey={'id'}
                 columns={
                     ([
-                            {key: 'id', title: 'ID', sortable: true, filterable: false},
-                            {key: 'name', title: 'Name', editable: true, inputType: 'text', sortable: true, filterable: false},
-                            {key: 'gender', title: 'Gender', editable: true, inputType: 'select', options: [{value: 'M', label: 'M'}, {value: 'F', label: 'F'}, {value: 'O', label: 'Other'}], sortable: true, filterable: false},
+                            {key: 'id', title: 'ID', sortable: true, filterable: false, frozen: true},
+                            {key: 'name', title: 'Name', editable: false, inputType: 'text', sortable: true, filterable: false, frozen: true},
+                            {key: 'gender', title: 'Gender', editable: true, inputType: 'select', 
+                                options: options.genders.map(gender => ({ value: gender, label: gender })), sortable: true, filterable: false},
                             {key: 'weight', title: 'Weight (kg)', editable: true, inputType: 'number', sortable: true, filterable: false, showOnEditOnly: true},
-                            {key: 'birthdate', title: 'DOB', editable: true, inputType: 'date', sortable: true, filterable: false, showOnEditOnly: true},
+                            {key: 'preferredSide', title: 'Preferred Side', editable: true, inputType: 'select', 
+                                options: options.preferredSides.map(side => ({ value: side, label: side })), sortable: true, filterable: false},
+                            {key: 'birthdate', title: 'DOB', hideOnEdit: true, editable: false, inputType: 'date', sortable: true, filterable: false, showOnEditOnly: true},
                         ] as Column<Paddler>[])
                     .concat((regatta.races || []).map((race: Race) => ({
                         key: `race_${race.id}`,
                         title: `${race.category}-${race.type}-${race.distance}-${race.boatType}`,
+                        hideOnEdit: true, 
                         render: (row: Paddler) => {
                             const allocated = (race.paddlers || []).some(p => p.id === row.id)
                             return (
@@ -98,7 +106,7 @@ const PaddlersPanel: React.FC = () => {
                             )
                         }
                     }) as Column<Paddler>))
-                    .concat({key: 'totalRaces', title: 'Total Races', render: (row: Paddler) => {
+                    .concat({key: 'totalRaces', title: 'Total Races', hideOnEdit: true, render: (row: Paddler) => {
                         const count = (regatta.races || []).reduce((acc, r) => acc + ((r.paddlers || []).some((p: Paddler) => p.id === row.id) ? 1 : 0), 0)
                         return (<span className={`text-sm`}>{count}</span>)
                     }})

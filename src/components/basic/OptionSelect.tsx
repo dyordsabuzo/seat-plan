@@ -2,7 +2,7 @@ import React from 'react'
 import { useOptions } from '../../context/OptionsContext'
 
 type Props = {
-    optionKey: 'categories' | 'types' | 'distances' | 'boatTypes' | 'genders'
+    optionKey: 'categories' | 'types' | 'distances' | 'boatTypes' | 'genders' | 'preferredSides'
     value?: string | undefined
     placeholder?: string
     className?: string

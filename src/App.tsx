@@ -6,17 +6,21 @@
 // import Tabs from './components/Tabs';
 // import {BoatContextProvider} from './context/BoatContext';
 // import SetupPage from "./pages/SetupPage";
-import {SetupProvider} from "./context/SetupContext";
-import {RegattaProvider} from "./context/RegattaContext";
-import {BrowserRouter, Outlet, Route, Routes} from "react-router-dom";
-import RaceAgeCategory from "./pages/wizard/RaceAgeCategory";
-import RaceType from "./pages/wizard/RaceType";
-import RaceDistance from "./pages/wizard/RaceDistance";
-import RaceBoatSize from "./pages/wizard/RaceBoatSize";
-import PaddlerListUpload from "./pages/wizard/PaddlerListUpload";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import MainLayout from './components/Layout/MainLayout';
+import { RequireAuth } from './context/AuthContext';
+import { RegattaProvider } from "./context/RegattaContext";
+import { SetupProvider } from "./context/SetupContext";
+import { ToastProvider } from './context/ToastContext';
+import ClubsPage from "./pages/ClubsPage";
+import LoginPage from "./pages/LoginPage";
 import SetupBoard from "./pages/SetupBoard";
-import SetupHome from "./pages/SetupHome";
 import Manage from "./pages/regatta/Manage";
+import PaddlerListUpload from "./pages/wizard/PaddlerListUpload";
+import RaceAgeCategory from "./pages/wizard/RaceAgeCategory";
+import RaceBoatSize from "./pages/wizard/RaceBoatSize";
+import RaceDistance from "./pages/wizard/RaceDistance";
+import RaceType from "./pages/wizard/RaceType";
 
 // import Sample from "./components/drag-and-drop/Sample";
 
@@ -28,12 +32,16 @@ function App() {
         //         <SetupPage/>
         //     </BoatContextProvider>
         // </div>
+        <ToastProvider>
         <SetupProvider>
             <RegattaProvider>
             <BrowserRouter>
                 <Routes>
-                    <Route path="/" element={<Outlet/>}>
-                        <Route index element={<SetupHome/>}/>
+                    <Route path="/login" element={<LoginPage/>} />
+
+                    {/* <Route path="/" element={<RequireAuth><Outlet/></RequireAuth>}> */}
+                    <Route path="/" element={<MainLayout/>}>
+                        <Route index element={<ClubsPage/>}/>
                         <Route path="manage" element={<Manage/>}/>
                         <Route path="category" element={<RaceAgeCategory/>}/>
                         <Route path="type" element={<RaceType/>}/>
@@ -41,11 +49,12 @@ function App() {
                         <Route path="boat" element={<RaceBoatSize/>}/>
                         <Route path="paddlers" element={<PaddlerListUpload/>}/>
                         <Route path="setupboard" element={<SetupBoard/>}/>
+                        <Route path="clubs" element={<RequireAuth><ClubsPage/></RequireAuth>} />
                     </Route>
 
                     {/* Backwards-compatible entrypoint: /seat-plan */}
-                    <Route path="/seat-plan" element={<Outlet/>}>
-                        <Route index element={<SetupHome/>}/>
+                    <Route path="/seat-plan" element={<RequireAuth><MainLayout/></RequireAuth>}>
+                        <Route index element={<ClubsPage/>}/>
                         <Route path="manage" element={<Manage/>}/>
                         <Route path="category" element={<RaceAgeCategory/>}/>
                         <Route path="type" element={<RaceType/>}/>
@@ -53,11 +62,13 @@ function App() {
                         <Route path="boat" element={<RaceBoatSize/>}/>
                         <Route path="paddlers" element={<PaddlerListUpload/>}/>
                         <Route path="setupboard" element={<SetupBoard/>}/>
+                        <Route path="clubs" element={<RequireAuth><ClubsPage/></RequireAuth>} />
                     </Route>
                 </Routes>
             </BrowserRouter>
             </RegattaProvider>
         </SetupProvider>
+        </ToastProvider>
     );
 }
 

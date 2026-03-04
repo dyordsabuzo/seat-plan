@@ -1,5 +1,5 @@
-import {Droppable} from "react-beautiful-dnd";
-import React, {ReactNode} from "react";
+import { ReactNode } from "react";
+import { Droppable } from '../../DragDropWrappers';
 
 type Props = {
     section: any
@@ -16,13 +16,10 @@ export default function DroppablePosition({section, id, label, children}: Props)
             <Droppable key={id} droppableId={`${id}`}>
                 {(provided, snapshot) => (
                     <div
-                        className={`
-                        flex flex-col items-center
-                        py-1 w-[9.5rem]
-                        ${snapshot.isDraggingOver ? "bg-[lightblue]" : ""}
-                    `}
                         ref={provided.innerRef}
                         {...provided.droppableProps}
+                        className={`flex flex-col items-start py-1 w-[9.5rem] ${snapshot.isDraggingOver ? "bg-[lightblue]" : ""}`}
+                        style={{ minHeight: Math.max(4, (section?.length ?? 0)) * 56 }}
                     >
                         {children}
                         {provided.placeholder}

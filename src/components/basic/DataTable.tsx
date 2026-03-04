@@ -9,10 +9,14 @@ export type Column<T> = {
     inputType?: 'text'|'number'|'select'|'date'
     options?: Option[]
     width?: string
+    // when true, column will be frozen (sticky) on the left when horizontally scrolling
+    frozen?: boolean
     sortable?: boolean
     filterable?: boolean
     // when true, the column is only shown while a row is in edit mode
     showOnEditOnly?: boolean
+    // when true, the column is hidden while any row is being edited
+    hideOnEdit?: boolean
     render?: (row: T) => React.ReactNode
 }
 
@@ -24,13 +28,49 @@ type Props<T> = {
     onSave?: (row: T) => void
     onDelete?: (rowKey: any) => void
     className?: string
+    // optional row selection (checkboxes)
+    selectable?: boolean
+    selected?: any[]
+    onSelectionChange?: (selected: any[]) => void
 }
 
-export default function DataTable<T extends Record<string, any>>({columns, data, rowKey, noEdit = false, onSave, onDelete, className = ''}: Props<T>) {
+export default function DataTable<T extends Record<string, any>>({columns, data, rowKey, noEdit = false, onSave, onDelete, className = '', selectable = false, selected: selectedProp, onSelectionChange}: Props<T>) {
     const [editingId, setEditingId] = useState<any>(null)
     const [draft, setDraft] = useState<Partial<T> | null>(null)
     const [sortBy, setSortBy] = useState<{key: string|null, direction: 'asc'|'desc'|null}>({key: null, direction: null})
     const [filters, setFilters] = useState<Record<string,string>>({})
+    const tableWrapperRef = React.useRef<HTMLDivElement | null>(null)
+    const [frozenLefts, setFrozenLefts] = React.useState<Record<number, number>>({})
+    const [internalSelected, setInternalSelected] = useState<any[]>([])
+    const isControlledSelection = typeof selectedProp !== 'undefined'
+    const selected = isControlledSelection ? (selectedProp as any[]) : internalSelected
+
+    const setSelected = (next: any[]) => {
+        if (onSelectionChange) onSelectionChange(next)
+        if (!isControlledSelection) setInternalSelected(next)
+    }
+
+    // compute left offsets for frozen columns after render
+    React.useLayoutEffect(() => {
+        const wrapper = tableWrapperRef.current
+        if (!wrapper) return
+        const ths = wrapper.querySelectorAll('thead tr:first-child th')
+        if (!ths || ths.length === 0) return
+        const lefts: Record<number, number> = {}
+        let acc = 0
+        // account for optional selection column at the start
+        const offset = selectable ? 1 : 0
+        columns.forEach((col, idx) => {
+            const th = ths[idx + offset] as HTMLElement | undefined
+            const width = th ? Math.ceil(th.getBoundingClientRect().width) : 0
+            if (col.frozen) {
+                lefts[idx] = acc
+                acc += width
+            }
+        })
+        setFrozenLefts(lefts)
+    // eslint-disable-next-line
+    }, [columns, data])
 
     const startEdit = (row: T) => {
         setEditingId(row[rowKey as string])
@@ -100,13 +140,34 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
     }, [data, filters, sortBy])
 
     return (
-        <div className={`overflow-auto border rounded-lg ${className}`}>
+        <div ref={tableWrapperRef} className={`overflow-auto border rounded-lg ${className}`}>
             <table className={`min-w-full divide-y divide-gray-200`}> 
                 <thead className={`bg-gray-50`}>
                     <tr>
+                        {/* selection header cell */}
+                        {selectable ? (
+                            <th className={`px-4 py-2 text-left text-xs font-medium text-gray-500`}>
+                                <input type="checkbox" ref={el => {
+                                    if (!el) return
+                                    const all = processed.length > 0 && processed.every(r => selected.includes(r[rowKey as string]))
+                                    const some = processed.some(r => selected.includes(r[rowKey as string])) && !all
+                                    el.checked = all
+                                    el.indeterminate = some
+                                }} onChange={e => {
+                                    if (e.target.checked) {
+                                        setSelected(processed.map(r => r[rowKey as string]))
+                                    } else {
+                                        setSelected([])
+                                    }
+                                }} />
+                            </th>
+                        ) : null}
                         {columns.map((col, idx) => (
-                            <th key={idx} className={`px-4 py-2 text-left text-xs font-medium text-gray-500 ${col.sortable ? 'cursor-pointer select-none' : ''}`} style={{width: col.width}} onClick={() => toggleSort(String(col.key), col.sortable)}>
-                                <div className={`flex items-center gap-2`}>{(col.showOnEditOnly && !editingId) ? '' : col.title}
+                            <th key={idx}
+                                className={`px-4 py-2 text-left text-xs font-medium text-gray-500 ${col.sortable ? 'cursor-pointer select-none' : ''}`}
+                                style={Object.assign({}, {width: col.width}, col.frozen ? { position: 'sticky' as const, left: frozenLefts[idx] ?? 0, zIndex: 30, background: '#fff' } : {})}
+                                onClick={() => toggleSort(String(col.key), col.sortable)}>
+                                <div className={`flex items-center gap-2`}>{(col.showOnEditOnly && !editingId) || (col.hideOnEdit && editingId) ? '' : col.title}
                                     {sortBy.key === String(col.key) && sortBy.direction === 'asc' && <span>▲</span>}
                                     {sortBy.key === String(col.key) && sortBy.direction === 'desc' && <span>▼</span>}
                                 </div>
@@ -117,9 +178,13 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
 
                     {/* Filter row */}
                     <tr>
+                        {selectable ? (<th></th>) : null}
                         {columns.map((col, idx) => (
-                            <th key={idx} className={`px-2 py-1 text-left text-xs font-medium text-gray-500`}> 
-                                {(!col.showOnEditOnly || editingId) && col.filterable ? (
+                            <th key={idx}
+                                className={`px-2 py-1 text-left text-xs font-medium text-gray-500`}
+                                style={col.frozen ? { position: 'sticky', left: frozenLefts[idx] ?? 0, zIndex: 25, background: '#fff' } : {}}
+                            > 
+                                {((!col.showOnEditOnly || editingId) && !(col.hideOnEdit && editingId) && col.filterable) ? (
                                     col.inputType === 'select' && col.options ? (
                                         <select className={`border rounded p-1 text-sm w-full`} value={filters[String(col.key)] ?? ''} onChange={e => setFilterValue(String(col.key), e.target.value)}>
                                             <option value="">(any)</option>
@@ -137,7 +202,7 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
                 <tbody className={`bg-white divide-y divide-gray-100`}>
                     {data.length === 0 && (
                         <tr>
-                            <td colSpan={columns.length + 1} className={`px-4 py-6 text-center text-sm text-gray-500`}>No items</td>
+                            <td colSpan={columns.length + 1} className={`px-4 py-6 text-center text-xs text-gray-500`}>No items</td>
                         </tr>
                     )}
 
@@ -146,10 +211,22 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
                         const isEditing = editingId === key
                         return (
                             <tr key={String(key) || rIdx}>
+                                {selectable ? (
+                                    <td className={`px-4 py-2`}> 
+                                        <input type="checkbox" checked={selected.includes(key)} onChange={e => {
+                                            if (e.target.checked) setSelected([...selected, key])
+                                            else setSelected(selected.filter(s => s !== key))
+                                        }} />
+                                    </td>
+                                ) : null}
                                 {columns.map((col, cIdx) => {
+                                    // hide columns that are explicitly hidden while editing
+                                    if (isEditing && col.hideOnEdit) {
+                                        return <td key={cIdx} className={`px-4 py-2 text-xs text-gray-700`}></td>
+                                    }
                                     // hide columns that are show-on-edit-only when not editing
                                     if (!isEditing && col.showOnEditOnly) {
-                                        return <td key={cIdx} className={`px-4 py-2 text-sm text-gray-700`}></td>
+                                        return <td key={cIdx} className={`px-4 py-2 text-xs text-gray-700`}></td>
                                     }
                                     const field = col.key as string
                                     const value = row[field]
@@ -157,8 +234,8 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
                                         // render input
                                         if (col.inputType === 'select' && col.options) {
                                             return (
-                                                <td key={cIdx} className={`px-4 py-2 text-sm text-gray-700`}>
-                                                    <select className={`border rounded p-1 text-sm w-full`} value={(draft as any)[field] ?? ''} onChange={e => setDraft({...draft, [field]: e.target.value})}>
+                                                <td key={cIdx} className={`px-2 py-2 text-xs text-gray-700`} style={col.frozen ? { position: 'sticky', left: frozenLefts[cIdx] ?? 0, zIndex: 20, background: '#fff' } : {}}>
+                                                    <select className={`border rounded p-1 text-xs w-full`} value={(draft as any)[field] ?? ''} onChange={e => setDraft({...draft, [field]: e.target.value})}>
                                                         {col.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                                     </select>
                                                 </td>
@@ -167,27 +244,27 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
 
                                         const inputType = col.inputType === 'number' ? 'number' : col.inputType === 'date' ? 'date' : 'text'
                                         return (
-                                            <td key={cIdx} className={`px-4 py-2 text-sm text-gray-700`}>
-                                                <input className={`w-full border rounded p-1 text-sm`} value={(draft as any)[field] ?? ''} type={inputType} onChange={e => setDraft({...draft, [field]: e.target.value})} />
+                                            <td key={cIdx} className={`px-2 py-2 text-xs text-gray-700`} style={col.frozen ? { position: 'sticky', left: frozenLefts[cIdx] ?? 0, zIndex: 20, background: '#fff' } : {}}>
+                                                <input className={`w-full border rounded p-1 text-xs`} value={(draft as any)[field] ?? ''} type={inputType} onChange={e => setDraft({...draft, [field]: e.target.value})} />
                                             </td>
                                         )
                                     }
 
                                     // not editing or non-editable
-                                    if (col.render) return <td key={cIdx} className={`px-4 py-2 text-sm text-gray-700`}>{col.render(row)}</td>
-                                    return <td key={cIdx} className={`px-4 py-2 text-sm text-gray-700`}>{value ?? ''}</td>
+                                    if (col.render) return <td key={cIdx} className={`px-4 py-2 text-xs text-gray-700`} style={col.frozen ? { position: 'sticky', left: frozenLefts[cIdx] ?? 0, zIndex: 20, background: '#fff' } : {}}>{col.render(row)}</td>
+                                    return <td key={cIdx} className={`px-4 py-2 text-xs text-gray-700`} style={col.frozen ? { position: 'sticky', left: frozenLefts[cIdx] ?? 0, zIndex: 20, background: '#fff' } : {}}>{value ?? ''}</td>
                                 })}
 
                                 <td className={`px-4 py-2 text-right`}>
                                     {isEditing ? (
                                         <div className={`flex gap-2 justify-end`}>
-                                            <button onClick={save} className={`px-2 py-1 text-sm bg-green-500 text-white rounded`}>Save</button>
-                                            <button onClick={cancelEdit} className={`px-2 py-1 text-sm bg-gray-200 rounded`}>Cancel</button>
+                                            <button onClick={save} className={`px-2 py-1 text-xs bg-green-500 text-white rounded`}>Save</button>
+                                            <button onClick={cancelEdit} className={`px-2 py-1 text-xs bg-gray-200 rounded`}>Cancel</button>
                                         </div>
                                     ) : (
                                         <div className={`flex gap-2 justify-end`}>
-                                            {!noEdit && <button onClick={() => startEdit(row)} className={`px-2 py-1 text-sm bg-blue-500 text-white rounded`}>Edit</button>}
-                                            <button onClick={() => onDelete && onDelete(key)} className={`px-2 py-1 text-sm bg-red-500 text-white rounded`}>Delete</button>
+                                            {!noEdit && <button onClick={() => startEdit(row)} className={`px-2 py-1 text-xs bg-blue-500 text-white rounded`}>Edit</button>}
+                                            <button onClick={() => onDelete && onDelete(key)} className={`px-2 py-1 text-xs bg-red-500 text-white rounded`}>Delete</button>
                                         </div>
                                     )}
                                 </td>

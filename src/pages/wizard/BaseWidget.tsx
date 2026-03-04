@@ -3,9 +3,11 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { logger } from "../../common/helpers/logger";
 import { SelectionButton } from "../../components/basic/buttons/SelectionButton";
+import { useAuth } from '../../context/AuthContext';
 import { useRegattaState } from "../../context/RegattaContext";
 import { useSetupState } from "../../context/SetupContext";
 import { Race } from "../../types/RegattaType";
+import * as RegattasStorage from '../../utils/RegattasStorage';
 
 export default function BaseWidget({
                                        children = null, fieldName, defaults, navigateTo,
@@ -22,9 +24,10 @@ export default function BaseWidget({
         setValue
     } = useForm({defaultValues: state, mode: "onSubmit"});
 
-    const navigate = useNavigate()
+    const navigate = useNavigate();
+    const { user } = useAuth();
 
-    const saveData = (data: any) => {
+    const saveData = async (data: any) => {
         logger.debug("Saving data for field", fieldName, "with data", data);
 
         const fieldElements = data[fieldName].split(",");
@@ -69,12 +72,27 @@ export default function BaseWidget({
             logger.debug("Generated races", races);
 
             regatta.races = races;
-            const regattaConfigs = localStorage.getItem('regattaConfigs');
-
-            localStorage.setItem('regattaConfigs', JSON.stringify({
-                ...JSON.parse(regattaConfigs || '{}'),
-                [regatta.name]: regatta
-            }));
+            
+            if (user && user.uid) {
+                // persist to Firestore (top-level regattas for now)
+                try {
+                    await RegattasStorage.upsertRegatta(user.uid, undefined, regatta)
+                } catch (e) {
+                    console.debug('Failed to persist regatta to Firestore', e)
+                    // fallback to localStorage
+                    const regattaConfigs = localStorage.getItem('regattaConfigs');
+                    localStorage.setItem('regattaConfigs', JSON.stringify({
+                        ...JSON.parse(regattaConfigs || '{}'),
+                        [regatta.name]: regatta
+                    }))
+                }
+            } else {
+                const regattaConfigs = localStorage.getItem('regattaConfigs');
+                localStorage.setItem('regattaConfigs', JSON.stringify({
+                    ...JSON.parse(regattaConfigs || '{}'),
+                    [regatta.name]: regatta
+                }))
+            }
 
             logger.debug("Regatta state after config setup", regatta);
         }

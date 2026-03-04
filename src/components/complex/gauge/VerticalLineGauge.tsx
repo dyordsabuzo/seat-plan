@@ -73,7 +73,7 @@ export default function VerticalLineGauge({
                 </svg>
 
                 <div style={{position: 'absolute', top: labelPos, left: '100%', transform: 'translate(-50%, -50%)', zIndex: 2, pointerEvents: 'none'}}>
-                    <span className={`text-xs bg-white p-1 rounded border font-semibold`}>{textValue.replace(' ', '')}</span>
+                    <span className={`text-xs bg-white p-1 rounded border font-semibold shadow-md`}>{textValue.replace(' ', '')}</span>
                 </div>
             </div>
         </div>

@@ -1,4 +1,5 @@
-import { Draggable } from "react-beautiful-dnd";
+import { useBoardView } from "../../../context/BoardViewContext";
+import { Draggable } from '../../DragDropWrappers';
 import { LabelWidget } from "../widgets/LabelWidget";
 // import { logger } from "../../../common/helpers/logger";
 // import {BoatLabel} from "../../../enums/BoatConstant";
@@ -13,13 +14,19 @@ type Props = {
 
 export default function DraggableItem({item, index, position, defaultLabel = "", onButtonClick = null}: Props) {
 
+    const {state} = useBoardView();
+    const {settings} = state;   
+
     const clickHandler = () => {
-        onButtonClick(item, position, index)
+        if (onButtonClick) onButtonClick(item, position, index)
     }
+
+    const itemLabel = settings.showWeights && item.name && !item.name.includes('Empty') ? 
+        `${item.name} (${item.weight})` : item.name ?? defaultLabel;
 
     return (
         <Draggable
-            draggableId={item.id}
+            draggableId={String(item.id)}
             index={index}
         >
             {(provided, snapshot) => (
@@ -34,9 +41,10 @@ export default function DraggableItem({item, index, position, defaultLabel = "",
                     ref={provided.innerRef}
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
+                    style={{ ...(provided.draggableProps.style as any) }}
                 >
-                    <LabelWidget label={item.content ?? defaultLabel}
-                                 onClick={item.content !== defaultLabel && onButtonClick ? clickHandler : null}
+                    <LabelWidget label={itemLabel}
+                                 onAction={item.content !== defaultLabel && onButtonClick ? clickHandler : undefined}
                     />
                 </div>
             )}

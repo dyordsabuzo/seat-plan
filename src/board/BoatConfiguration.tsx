@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { DragDropContext } from "react-beautiful-dnd";
+import { useEffect, useState } from 'react';
+import DragDropContextWrapper from '../components/DragDropContextWrapper';
 import { DrummerSection } from "../components/board/sections/DrummerSection";
 import { PaddleSection } from "../components/board/sections/PaddleSection";
 import { ReserveSection } from "../components/board/sections/ReserveSection";
@@ -10,6 +10,7 @@ import { useSetupState } from "../context/SetupContext";
 import { BoatPosition, BoatSize } from "../enums/BoatConstant";
 import { getItems, move, reorder } from "../utils/ConfigurationHelper";
 import { calculateLineBalance, calculateSideBalance } from "../utils/WeightCalculator";
+
 
 
 export default function BoatConfiguration() {
@@ -125,7 +126,7 @@ export default function BoatConfiguration() {
     return (
         <div className={`w-full flex justify-center`}>
             <div className={`w-full flex justify-center relative`}>
-                <DragDropContext onDragEnd={onDragEnd}>
+                <DragDropContextWrapper onDragEnd={onDragEnd}>
                     <div className={`flex flex-row`}>
                         <ReserveSection section={boatSetup[BoatPosition.RESERVE]}/>
                         <div className={`flex flex-col items-center gap-3`}>
@@ -135,7 +136,7 @@ export default function BoatConfiguration() {
                             <SweepSection section={boatSetup[BoatPosition.SWEEP]}/>
                         </div>
                     </div>
-                </DragDropContext>
+                </DragDropContextWrapper>
 
                 {/*<DragDropContext onDragEnd={onDragEnd}>*/}
                 {/*    /!*<div className={`absolute -left-11 md:left-24 flex py-4 mr-1 md:mr-8`}>*!/*/}

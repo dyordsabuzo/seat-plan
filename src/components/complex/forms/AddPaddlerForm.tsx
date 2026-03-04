@@ -11,7 +11,9 @@ const AddPaddlerForm: React.FC<Props> = ({ onSave, onCancel }) => {
     const [name, setName] = useState<string>('')
     const [gender, setGender] = useState<string>('')
     const [weight, setWeight] = useState<number | undefined>(undefined)
-    const [birthdate, setBirthdate] = useState<string>('')
+    // const [birthdate, setBirthdate] = useState<string>('')
+    const [category, setCategory] = useState<string>('')
+    const [preferredSide, setPreferredSide] = useState<string>('')
 
     const handleSave = () => {
         if (!name || name.trim() === '') {
@@ -27,7 +29,8 @@ const AddPaddlerForm: React.FC<Props> = ({ onSave, onCancel }) => {
             name: name as string,
             gender,
             weight: Number(weight),
-            birthdate
+            category,
+            preferredSide
         }
 
         onSave(created)
@@ -77,20 +80,22 @@ const AddPaddlerForm: React.FC<Props> = ({ onSave, onCancel }) => {
                     <button onClick={requestClose} aria-label="Close" className="text-gray-600 hover:text-black">✕</button>
                 </div> */}
                 <div className="flex items-center gap-2">
-                    <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="px-2 py-1 border rounded w-36 sm:w-40" />
-                    <OptionSelect optionKey="genders" value={gender} onChange={setGender} placeholder="gender" className="px-2 py-1 border rounded w-full" />
-
-                    {/* <select value={gender} onChange={(e) => setGender(e.target.value)} className="px-2 py-1 border rounded w-20 sm:w-24">
-                        <option value="M">M</option>
-                        <option value="F">F</option>
-                        <option value="O">Other</option>
-                    </select> */}
-                {/* </div>
-                <div className="mt-2 flex items-center gap-2"> */}
-                    <input placeholder="Weight (kg)" value={weight ?? ''} onChange={(e) => setWeight(e.target.value ? parseFloat(e.target.value) : undefined)} type="number" className="px-2 py-1 border rounded w-28 sm:w-24" />
-                    <input placeholder="DOB" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} type="date" className="px-2 py-1 border rounded w-40 sm:w-36" />
-                {/* </div>
-                <div className="mt-3 flex justify-end gap-2"> */}
+                    <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} 
+                        className="px-2 py-1 border rounded w-36 sm:w-40" />
+                    <OptionSelect optionKey="genders" value={gender} onChange={setGender} placeholder="gender" 
+                        className="px-2 py-1 border rounded w-full" />
+                    <input placeholder="Weight (kg)" value={weight ?? ''} 
+                        onChange={(e) => setWeight(e.target.value ? parseFloat(e.target.value) : undefined)} type="number" 
+                        className="px-2 py-1 border rounded w-28 sm:w-24" />
+                    <OptionSelect optionKey="preferredSides" value={preferredSide} 
+                        onChange={setPreferredSide} placeholder="preferred side" 
+                        className="px-2 py-1 border rounded w-full" />
+                    <OptionSelect optionKey="categories" value={category} 
+                        onChange={setCategory} placeholder="category" 
+                        className="px-2 py-1 border rounded w-full" />
+                    {/* <input placeholder="DOB" value={birthdate} 
+                        onChange={(e) => setBirthdate(e.target.value)} type="date" 
+                        className="px-2 py-1 border rounded w-40 sm:w-36" /> */}
                     <button onClick={handleSave} className="px-2 py-1 bg-green-500 text-white rounded">Save</button>
                     <button onClick={requestClose} className="px-2 py-1 bg-gray-200 text-black rounded">Cancel</button>
                 </div>

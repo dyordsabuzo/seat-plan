@@ -39,7 +39,7 @@ export default function HorizontalLineGauge({
                     </linearGradient>
                 </defs>
                 <g>
-                    <rect x="0" y="0" width="100%" height="100%" fill="url(#gradient)"></rect>
+                    <rect x={0} y={0} width="100%" height="100%" fill="url(#gradient)"  rx={4} ry={4} ></rect>
                 </g>
                 <g>
                     <line y1={50}
@@ -52,7 +52,7 @@ export default function HorizontalLineGauge({
             </svg>
             <div style={{width: '100%', height: 20, position: 'relative'}}>
                 <div style={{position: 'absolute', left: calcPos().labelPos, top: '50%', transform: 'translate(-20%, -50%)'}}>
-                    <span className={`text-xs bg-white px-2 py-0.5 rounded font-semibold border`}>{String(textValue).replace(' ', '')}</span>
+                    <span className={`text-xs bg-white px-2 py-0.5 rounded font-semibold border shadow-md`}>{String(textValue).replace(' ', '')}</span>
                 </div>
             </div>
         </div>

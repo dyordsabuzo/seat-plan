@@ -1,6 +1,6 @@
+import { useEffect, useState } from 'react';
+import { Droppable } from '../components/DragDropWrappers';
 import Paddler from './Paddler';
-import { Droppable } from 'react-beautiful-dnd';
-import { useState, useEffect } from 'react';
 
 type ColumnProps = {
     column: any,

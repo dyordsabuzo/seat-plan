@@ -1,6 +1,5 @@
-import {Draggable} from "react-beautiful-dnd";
-import React from "react";
-import {BoatPosition} from "../../../enums/BoatConstant";
+import { BoatPosition } from "../../../enums/BoatConstant";
+import { Draggable } from '../../DragDropWrappers';
 
 type Props = {
     item: any
@@ -12,7 +11,7 @@ type Props = {
 export default function DraggablePaddler({item, index, position, putOnReserve}: Props) {
     return (
         <Draggable
-            draggableId={item.id}
+            draggableId={String(item.id)}
             index={index}
         >
             {(provided, snapshot) => (
@@ -27,6 +26,7 @@ export default function DraggablePaddler({item, index, position, putOnReserve}: 
                     ref={provided.innerRef}
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
+                    style={{ ...(provided.draggableProps.style as any) }}
                 >
                     <div className={`
                             flex  relative

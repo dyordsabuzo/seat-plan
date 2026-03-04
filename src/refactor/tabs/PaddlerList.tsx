@@ -1,8 +1,8 @@
-import {useContext, useState} from "react";
-import Paddler from "../Paddler";
+import { useContext, useState } from "react";
 import UpdatePaddlerInfo from "../../components/complex/modals/UpdatePaddlerInfo";
+import { Droppable } from '../../components/DragDropWrappers';
 import BoatContext from "../../context/BoatContext";
-import {Droppable} from "react-beautiful-dnd";
+import Paddler from "../Paddler";
 
 type PaddlerListType = {
     dragFlag: boolean

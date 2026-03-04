@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../../context/AuthContext'
 import { useToast } from '../../../context/ToastContext'
 
@@ -8,6 +8,22 @@ const UserFloating: React.FC = () => {
 
   // keep hook calls at the top-level (always called in the same order)
   const [showImage, setShowImage] = useState<boolean>(Boolean(user && (user as any).photoURL))
+  const [expanded, setExpanded] = useState<boolean>(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    // When expanded, close if clicking outside the container
+    if (!expanded) return undefined
+    const handler = (e: MouseEvent) => {
+      const el = containerRef.current
+      if (!el) return
+      if (!el.contains(e.target as Node)) {
+        setExpanded(false)
+      }
+    }
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [expanded])
 
   if (!user) return null
 
@@ -24,24 +40,51 @@ const UserFloating: React.FC = () => {
     }
   }
 
+  // Toggle expansion when avatar is clicked. Stop propagation so document listener doesn't immediately close it.
+  const handleAvatarClick = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setExpanded(prev => !prev)
+  }
+
   return (
-    <div className="fixed top-4 right-4 z-50" role="region" aria-label="User profile">
-      <div className="bg-white/95 backdrop-blur border rounded-lg shadow-md p-2 flex items-center gap-3" tabIndex={0}>
-        <div className="w-10 h-10 rounded-full bg-sky-600 text-white flex items-center justify-center font-semibold overflow-hidden">
+    <div className={`fixed top-12 
+            ${expanded ? '-right-2' : '-right-[260px]'} z-50
+        `} role="region" aria-label="User profile">
+      <div
+        ref={containerRef}
+        className={`
+            bg-white/95 backdrop-blur border rounded-l-lg shadow-md p-2 flex 
+            items-center gap-3 overflow-hidden transition-all duration-300 ease-in-out 
+            w-[320px]
+            `}
+            tabIndex={0}
+            >
+          {/* ${expanded ? 'w-[320px]' : 'w-14'} */}
+        <div
+          onClick={handleAvatarClick}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleAvatarClick() } }}
+          role="button"
+          tabIndex={0}
+          aria-label={expanded ? 'Collapse user profile' : 'Open user profile'}
+          className="w-10 h-10 rounded-full bg-sky-600 text-white flex items-center justify-center font-semibold overflow-hidden shrink-0 cursor-pointer"
+        >
           {showImage && user.photoURL ? (
             <img src={user.photoURL} alt={`${displayName} avatar`} className="w-full h-full object-cover" onError={() => setShowImage(false)} />
           ) : (
             <span aria-hidden>{initials}</span>
           )}
         </div>
-        <div className="flex flex-col text-xs">
-          <span className="font-medium leading-none">{displayName}</span>
-          <span className="text-gray-500">{user.email}</span>
+
+        {/* Details area - hidden when collapsed due to parent width and overflow-hidden */}
+        <div className="flex flex-col text-xs truncate">
+          <span className="font-medium leading-none truncate">{displayName}</span>
+          <span className="text-gray-500 truncate">{user.email}</span>
         </div>
+
         <div className="pl-3">
           <button
             onClick={handleSignOut}
-            className="px-3 py-1 bg-red-500 text-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
+            className="px-2 py-1 bg-red-500 text-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
             aria-label="Sign out"
           >
             Sign out

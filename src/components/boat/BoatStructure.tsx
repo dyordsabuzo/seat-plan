@@ -33,16 +33,9 @@ export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType
         KeyboardSensor,
     ];
 
-    // Normalize all ids to strings to avoid type mismatches during drag events
     const [items, setItems] = useState(null);
-    // const [items, setItems] = useState({
-    //     [BoatPosition.RESERVE]: boardSetup[BoatPosition.RESERVE].map((item) => String(item.id)),
-    //     [BoatPosition.DRUMMER]: boardSetup[BoatPosition.DRUMMER].map((item) => String(item.id)),
-    //     [BoatPosition.LEFT]: boardSetup[BoatPosition.LEFT].map((item) => String(item.id)),
-    //     [BoatPosition.RIGHT]: boardSetup[BoatPosition.RIGHT].map((item) => String(item.id)),
-    //     [BoatPosition.SWEEP]: boardSetup[BoatPosition.SWEEP].map((item) => String(item.id)),
-    // });
-
+    const [reserveOpen, setReserveOpen] = useState(false)
+    
     useEffect(() => {
         if (boardSetup) {
             setItems({
@@ -194,11 +187,17 @@ export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType
             onDragOver={handleDragOver}                        
             onDragEnd={handleDragEnd}>
             {items && (
-                <div className={`flex gap-4`}>
-                    <SortableColumn 
-                        key={BoatPosition.RESERVE} 
-                        id={"RESERVE"}
-                        rows={items[BoatPosition.RESERVE].map(id => paddlers?.find(p => String(p.id) === String(id)) || {id, name: "Empty Seat"} as any)}/>
+                <div className={`flex gap-2`}>
+                    {/* Reserve column: inline on md+, slide-out panel on small screens */}
+                    <div className="hidden md:block">
+                        <SortableColumn 
+                            key={BoatPosition.RESERVE} 
+                            id={"RESERVE"}
+                            rows={items[BoatPosition.RESERVE].map(id => paddlers?.find(p => String(p.id) === String(id)) || {id, name: "Empty Seat"} as any)}/>
+                    </div>
+
+                    {/* Small-screen placeholder (floating button provided outside main flow) */}
+                    <div className="md:hidden" />
 
                     <div className={`flex flex-col items-center gap-2`}>
                         <HorizontalLineGauge
@@ -260,6 +259,44 @@ export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType
                     </div>
                 </div>
             )}
+
+            {/* Floating Reserves button for small screens (fixed, bottom-right) */}
+            <button
+                aria-expanded={reserveOpen}
+                aria-controls="reserve-panel"
+                onClick={() => setReserveOpen(true)}
+                className="fixed bottom-4 left-4 z-50 md:hidden inline-flex items-center justify-center w-12 h-12 rounded-full bg-sky-600 text-white shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400"
+                title="Open reserves"
+            >
+                <span className="sr-only">Open reserves</span>
+                {/* simple icon: three stacked dots */}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+            </button>
+
+            {/* Slide-out reserve panel for small screens (slides in from left) */}
+            <div
+                id="reserve-panel"
+                aria-hidden={!reserveOpen}
+                className={`fixed top-0 left-0 h-full z-50 transform transition-transform duration-300 ease-in-out md:hidden ${reserveOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                style={{ width: '18rem' }}
+            >
+                {/* backdrop overlay */}
+                <div className={`fixed inset-0 bg-black/40 ${reserveOpen ? 'block' : 'hidden'}`} onClick={() => setReserveOpen(false)} />
+                <div className={`relative h-full bg-white p-4 shadow-lg overflow-auto`}> 
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-medium">Reserves</h3>
+                        <button aria-label="Close reserves" onClick={() => setReserveOpen(false)} className="px-2 py-1 text-sm rounded bg-slate-100">Close</button>
+                    </div>
+                    {items && (
+                        <SortableColumn 
+                            key={`${BoatPosition.RESERVE}-panel`} 
+                            id={"RESERVE"}
+                            rows={items[BoatPosition.RESERVE].map(id => paddlers?.find(p => String(p.id) === String(id)) || {id, name: "Empty Seat"} as any)}/>
+                    )}
+                </div>
+            </div>
             {/* <DragOverlay>
                 {activeId ? (
                     (() => {

@@ -163,7 +163,7 @@ export default function RaceBoard({race}: Props) {
             </div>
                 
             {boardSetup && (
-                <div className={`w-full flex flex-col py-4 sm:flex-row sm:gap-4`}>
+                <div className={`w-full flex flex-col items-center py-4 sm:flex-row sm:gap-4`}>
                     <BoatStructure boatType={race.boatType} 
                         boardSetup={race.configs[selectedConfigIndex]}
                         updateConfig={

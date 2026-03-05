@@ -199,7 +199,7 @@ export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType
                     {/* Small-screen placeholder (floating button provided outside main flow) */}
                     <div className="md:hidden" />
 
-                    <div className={`flex flex-col items-center gap-2`}>
+                    <div className={`flex flex-col items-center gap-2 mt-6 sm:mt-1 scale-110 sm:scale-100`}>
                         <HorizontalLineGauge
                             value={checkBoatBalance(boardSetup, boatType)?.sideBalance.value}
                             GHeight={8}
@@ -279,15 +279,16 @@ export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType
             <div
                 id="reserve-panel"
                 aria-hidden={!reserveOpen}
-                className={`fixed top-0 left-0 h-full z-50 transform transition-transform duration-300 ease-in-out md:hidden ${reserveOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                className={`fixed bottom-0 left-0 h-[70vh] z-50 transform transition-transform duration-300 ease-in-out md:hidden ${reserveOpen ? 'translate-x-0' : '-translate-x-full'}`}
                 style={{ width: '18rem' }}
             >
                 {/* backdrop overlay */}
-                <div className={`fixed inset-0 bg-black/40 ${reserveOpen ? 'block' : 'hidden'}`} onClick={() => setReserveOpen(false)} />
-                <div className={`relative h-full bg-white p-4 shadow-lg overflow-auto`}> 
+                <div className={`fixed bottom-0 left-0 bg-black/40 ${reserveOpen ? 'block' : 'hidden'}`} onClick={() => setReserveOpen(false)} />
+                <div className={`relative h-full w-[170px] bg-white p-4 shadow-lg overflow-auto`}> 
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-medium">Reserves</h3>
-                        <button aria-label="Close reserves" onClick={() => setReserveOpen(false)} className="px-2 py-1 text-sm rounded bg-slate-100">Close</button>
+                        <button aria-label="Close reserves" onClick={() => setReserveOpen(false)} 
+                            className="px-2 py-1 text-sm rounded bg-slate-100">Close</button>
                     </div>
                     {items && (
                         <SortableColumn 
@@ -297,18 +298,6 @@ export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType
                     )}
                 </div>
             </div>
-            {/* <DragOverlay>
-                {activeId ? (
-                    (() => {
-                        const item = paddlers.find(p => String(p.id) === String(activeId));
-                        return (
-                            <div className="w-[8rem] h-[4rem] flex items-center text-sm border border-1 p-1 px-2 bg-white shadow z-50 pointer-events-none">
-                                {item ? (item.name || String(item.id)) : String(activeId)}
-                            </div>
-                        )
-                    })()
-                ) : null}
-            </DragOverlay> */}
         </DragDropProvider>
     );
 }

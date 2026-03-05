@@ -246,7 +246,9 @@ export default function SetupHome({clubId}:{clubId?:string}) {
     logger.debug("Rendering SetupHome with regatta", regatta, "and allRegattas", allRegattas);
     return (
         <Container className="py-6">
-            <input ref={fileInputRef} type="file" accept=".json,application/json" style={{display: 'none'}} onChange={importRegattaFromFile} />
+            <input ref={fileInputRef} type="file" 
+                accept=".json,application/json" style={{display: 'none'}} 
+                onChange={importRegattaFromFile} />
             <header className={`flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4`}>
                 <div>
                     <h1 className={`text-2xl font-semibold`}>Regatta configurations</h1>

@@ -296,7 +296,7 @@ export default function ClubsPage() {
 //   logger.debug("Rendering ClubsPage with state", { clubs, selectedClubId, activeTab })
 
   return (
-    <div className="p-6">
+    <div className="p-1 sm:p-4">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold">Clubs</h2>

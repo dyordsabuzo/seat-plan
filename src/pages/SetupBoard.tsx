@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logger } from "../common/helpers/logger";
-import Breadcrumb from '../components/basic/Breadcrumb';
 import Container from '../components/basic/Container';
 import RaceBoard from "../components/board/RaceBoard";
 import { ListWidget } from "../components/complex/widgets/ListWidget";
@@ -57,13 +56,13 @@ export function SetupBoard() {
 
     return (
         <BoardViewProvider>
-            <Container className="py-8">
-                <div className="w-full">
+            <Container className="py-2">
+                {/* <div className="w-full">
                     <div className="mb-4">
                         <Breadcrumb items={[{label: 'Home', to: '/'}]} title={`Boat configuration`} backPath={'/'} />
                     </div>
                     <h1 className={`w-full flex py-2 font-semibold`}>Regatta: {regatta ? regatta.name : ""}</h1>
-                </div>
+                </div> */}
 
                 <div className={`flex flex-col lg:flex-row gap-6`}> 
 

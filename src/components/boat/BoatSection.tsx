@@ -48,6 +48,7 @@ export function BoatSection({children, id}) {
 export function SortableColumn(
   props: {
     id: string;
+    type?: string;
     rows?: {id: string; name?: string}[]; 
     children?: React.ReactNode;
     hideXButton?: boolean;
@@ -74,13 +75,15 @@ export function SortableColumn(
       ref={ref}
       className={`
         max-h-[25.25rem] 
-        min-h-[2.5rem] min-w-[9rem] flex flex-col gap-1 border border-1 p-1 px-2 rounded overflow-hidden
-        ${props.id === 'RESERVE' ? 'overflow-y-auto' : ''}
+        min-h-[2.5rem] min-w-[9rem] flex flex-col gap-1 border border-1 p-1 px-2 
+        rounded overflow-hidden
+        ${props.id.startsWith('RESERVE') ? 'overflow-y-auto' : ''}
         ${isDropTarget ? 'bg-gray-60' : 'bg-gray-60'}
       `}
       data-shadow={'true'}
+      style={props.id.startsWith('RESERVE') ? { touchAction: 'pan-y', pointerEvents: 'auto' } : undefined}
     >
-      {props.id === 'RESERVE' && (
+      {props.id.startsWith('RESERVE') && (
         <h2 className={`text-xs font-semibold py-2`}>Reserves</h2>
       )}
     
@@ -88,7 +91,7 @@ export function SortableColumn(
           <div className='flex flex-col gap-2 bg-gray-100'>
               {props.rows.map((item, itemIndex) => (
                   <SortableItem 
-                    key={`${item.id}-${itemIndex}`} 
+                    key={[props.type, item.id, itemIndex].filter(Boolean).join('-')} 
                     item={item} 
                     column={props.id.toString()} 
                     index={itemIndex} 
@@ -126,13 +129,16 @@ export function SortableItem(props: {item: any; column?: string; index: number; 
 
     return (
         <div
-            ref={ref}
-            className={`
-                w-[7.8rem] h-[2rem] flex justify-between items-center text-xs p-1 px-2 rounded border
-                ${props.item.gender === 'F' ? 'border-l-4 border-l-red-400 bg-white' : props.item.gender === 'M' ? 'border-l-4 border-l-blue-400 bg-white' : 'bg-orange-100'}
-            `}
-            data-shadow={isDragging ? 'true' : undefined}
-            data-accent-color={props.column}
+          ref={ref}
+          className={`
+            w-[7.8rem] h-[2rem] flex justify-between items-center text-xs p-1 px-2 rounded border
+            ${props.item.gender === 'F' ? 'border-l-4 border-l-red-400 bg-white' : props.item.gender === 'M' ? 'border-l-4 border-l-blue-400 bg-white' : 'bg-orange-100'}
+          `}
+          data-shadow={isDragging ? 'true' : undefined}
+          data-accent-color={props.column}
+          style={{ touchAction: 'none', cursor: 'grab', pointerEvents: 'auto' }}
+          onMouseDown={(e) => { try { document.body.style.userSelect = 'none'; } catch (_) {} }}
+          onMouseUp={(e) => { try { document.body.style.userSelect = ''; } catch (_) {} }}
         >
             {settings.showWeights && props.item.name ?  
               `${props.item.name} (${props.item.weight})` : props.item.name}

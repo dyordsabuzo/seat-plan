@@ -56,16 +56,8 @@ export function SetupBoard() {
 
     return (
         <BoardViewProvider>
-            <Container className="py-2">
-                {/* <div className="w-full">
-                    <div className="mb-4">
-                        <Breadcrumb items={[{label: 'Home', to: '/'}]} title={`Boat configuration`} backPath={'/'} />
-                    </div>
-                    <h1 className={`w-full flex py-2 font-semibold`}>Regatta: {regatta ? regatta.name : ""}</h1>
-                </div> */}
-
+            <Container className="h-full">
                 <div className={`flex flex-col lg:flex-row gap-6`}> 
-
                     {regatta && (
                         <div className={`w-full`}>
                             <div className="flex items-end gap-2 w-full">
@@ -74,21 +66,6 @@ export function SetupBoard() {
                                             selectedIndex={selection ? regatta.races?.findIndex(config => `${config.category}-${config.type}-${config.distance}-${config.boatType}` === selection) : -1}
                                             setSelection={handleSelection}
                                 />
-                                {/* {selection && (
-                                    <button 
-                                    className={`text-sm text-blue-500 border border-blue-500 rounded px-2 py-1`}
-                                    onClick={() => {
-                                        race.configs = [];
-                                    }}>Reset configs</button>
-                                )} */}
-                                {/* <label className="flex items-center gap-2">
-                                    <input
-                                    type="checkbox"
-                                    checked={showWeights}
-                                    onChange={e => setShowWeights(e.target.checked)}
-                                    />
-                                    <span className="text-sm text-gray-800">Show Weights</span>
-                                    </label> */}
                             </div>
                             <div className={`w-full`}>
                                 {race && (

@@ -46,7 +46,7 @@ export default function VerticalLineGauge({
     const {pos, labelPos} = calcPos()
 
     return (
-        <div className={`flex items-center gap-3`}>
+        <div className={`flex items-end gap-3`}>
             <div style={{position: 'relative', width: GWidth, height: GHeight}}>
                 <svg width={GWidth} height={GHeight}>
                 <defs>
@@ -72,7 +72,7 @@ export default function VerticalLineGauge({
                 </g>
                 </svg>
 
-                <div style={{position: 'absolute', top: labelPos, left: '100%', transform: 'translate(-50%, -50%)', zIndex: 2, pointerEvents: 'none'}}>
+                <div style={{position: 'absolute', top: labelPos, left: '100%', transform: 'translate(-95%, -50%)', zIndex: 2, pointerEvents: 'none'}}>
                     <span className={`text-xs bg-white p-1 rounded border font-semibold shadow-md`}>{textValue.replace(' ', '')}</span>
                 </div>
             </div>

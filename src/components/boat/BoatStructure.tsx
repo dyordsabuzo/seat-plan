@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BoatPosition } from "../../enums/BoatConstant";
 // import { Draggable, Item } from "./BoatElement";
 import { defaultPreset, KeyboardSensor, PointerSensor } from '@dnd-kit/dom';
@@ -10,7 +10,7 @@ import HorizontalLineGauge from "../complex/gauge/HorizontalLineGauge";
 import VerticalLineGauge from "../complex/gauge/VerticalLineGauge";
 import { SortableColumn } from "./BoatSection";
 
-export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType: string, boardSetup: any, updateConfig: (config: any) => void }) => {
+export const BoatStructure = ({ race, boatType, boardSetup, updateConfig }: { race: any, boatType: string, boardSetup: any, updateConfig: (config: any) => void }) => {
     const [backup, setBackup] = useState(null);
     const {state, checkBoatBalance} = useSetupState();
 
@@ -35,6 +35,113 @@ export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType
 
     const [items, setItems] = useState(null);
     const [reserveOpen, setReserveOpen] = useState(false)
+    const [expanded, setExpanded] = useState(false)
+    const [isSmall, setIsSmall] = useState<boolean>(false)
+
+    const containerRef = useRef<HTMLDivElement | null>(null)
+    const prevActiveRef = useRef<HTMLElement | null>(null)
+    const scrollYRef = useRef<number>(0)
+
+    // Track small-screen state (Tailwind `md` breakpoint = 768px)
+    useEffect(() => {
+        const mq = window.matchMedia('(min-width: 768px)')
+        const update = (e?: MediaQueryListEvent) => {
+            const matches = e ? e.matches : mq.matches
+            const small = !matches
+            setIsSmall(small)
+            if (!small) setExpanded(false)
+        }
+        update()
+        if (typeof mq.addEventListener === 'function') mq.addEventListener('change', update)
+        else mq.addListener(update as any)
+        return () => {
+            if (typeof mq.removeEventListener === 'function') mq.removeEventListener('change', update)
+            else mq.removeListener(update as any)
+        }
+    }, [])
+
+    // Focus-trap and Escape-to-close when expanded on small screens
+    useEffect(() => {
+        if (!expanded || !isSmall) return undefined
+
+        const container = containerRef.current
+        if (!container) return undefined
+
+        // save previous active element to restore focus on close
+        prevActiveRef.current = document.activeElement as HTMLElement | null
+
+        // lock body scroll by fixing body position and preserving current scroll
+        try {
+            scrollYRef.current = window.scrollY || window.pageYOffset || 0
+            document.body.style.position = 'fixed'
+            document.body.style.top = `-${scrollYRef.current}px`
+            document.body.style.left = '0'
+            document.body.style.right = '0'
+            document.body.style.width = '100%'
+            document.body.style.overflow = 'hidden'
+        } catch (e) {
+            // ignore in SSR or if styles cannot be applied
+        }
+
+        const selector = 'a[href], area[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])'
+        const getFocusable = () => Array.from(container.querySelectorAll<HTMLElement>(selector)).filter(el => el.offsetParent !== null || el === document.activeElement)
+
+        const focusable = getFocusable()
+        if (focusable.length) {
+            focusable[0].focus()
+        } else {
+            // if no focusable element, focus the container itself
+            container.tabIndex = -1
+            container.focus()
+        }
+
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault()
+                setExpanded(false)
+                return
+            }
+
+            if (e.key === 'Tab') {
+                const nodes = getFocusable()
+                if (!nodes.length) return
+                const first = nodes[0]
+                const last = nodes[nodes.length - 1]
+                const active = document.activeElement as HTMLElement | null
+                if (e.shiftKey) {
+                    if (active === first || active === container) {
+                        e.preventDefault()
+                        last.focus()
+                    }
+                } else {
+                    if (active === last) {
+                        e.preventDefault()
+                        first.focus()
+                    }
+                }
+            }
+        }
+
+        document.addEventListener('keydown', onKey)
+        return () => {
+            document.removeEventListener('keydown', onKey)
+            // restore previous focus
+            try { prevActiveRef.current?.focus() } catch (e) { /* noop */ }
+
+            // restore body scroll and position
+            try {
+                document.body.style.position = ''
+                document.body.style.top = ''
+                document.body.style.left = ''
+                document.body.style.right = ''
+                document.body.style.width = ''
+                document.body.style.overflow = ''
+                window.scrollTo(0, scrollYRef.current || 0)
+            } catch (e) {
+                // ignore
+            }
+        }
+    }, [expanded, isSmall])
     
     useEffect(() => {
         if (boardSetup) {
@@ -187,11 +294,16 @@ export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType
             onDragOver={handleDragOver}                        
             onDragEnd={handleDragEnd}>
             {items && (
-                <div className={`flex gap-2`}>
+                <div
+                    ref={containerRef}
+                    role={expanded && isSmall ? 'dialog' : undefined}
+                    aria-modal={expanded && isSmall ? true : undefined}
+                    aria-label={expanded && isSmall ? 'Boat full view' : undefined}
+                    className={`flex gap-2 ${(expanded && isSmall) ? 'items-stretch fixed inset-0 z-[1050] bg-white overflow-auto' : 'p-6'}`}>
                     {/* Reserve column: inline on md+, slide-out panel on small screens */}
-                    <div className="hidden md:block">
+                    <div className="hidden md:block" style={{ pointerEvents: 'auto' }}>
                         <SortableColumn 
-                            key={BoatPosition.RESERVE} 
+                            key={BoatPosition.RESERVE}
                             id={"RESERVE"}
                             rows={items[BoatPosition.RESERVE].map(id => paddlers?.find(p => String(p.id) === String(id)) || {id, name: "Empty Seat"} as any)}/>
                     </div>
@@ -199,73 +311,119 @@ export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType
                     {/* Small-screen placeholder (floating button provided outside main flow) */}
                     <div className="md:hidden" />
 
-                    <div className={`flex flex-col items-center gap-2 mt-6 sm:mt-1 scale-110 sm:scale-100`}>
-                        <HorizontalLineGauge
-                            value={checkBoatBalance(boardSetup, boatType)?.sideBalance.value}
-                            GHeight={8}
-                            toleranceMin={-state.settings.sideWeightTolerance}
-                            toleranceMax={state.settings.sideWeightTolerance}
-                        />
-                        <SortableColumn 
-                            key={BoatPosition.DRUMMER} 
-                            id={"DRUMMER"}
-                            rows={items[BoatPosition.DRUMMER].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.DRUMMER}-${index}`, name: ""})}
-                            hideXButton={true}
-                            removeItem={handleRemoveItem}
-                            />
-
-                        <div className={`
-                            text-gray-900 ring-2 ring-orange-200
-                            dark:focus:ring-teal-700 
-                            rounded-full p-2 w-8 h-8
-                        `}/>
-
-                        <div className={`flex gap-6`}>
-                            <div className={`flex gap-2`}>
-                                <SortableColumn 
-                                    key={BoatPosition.LEFT} 
-                                    id={"LEFT"}
-                                    rows={items[BoatPosition.LEFT].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.LEFT}-${index}`, name: ""})}
-                                    hideXButton={true}
-                                    removeItem={handleRemoveItem}
-                                    />
-                                
-                                <SortableColumn 
-                                    key={BoatPosition.RIGHT} 
-                                    id={"RIGHT"}
-                                    rows={items[BoatPosition.RIGHT].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.RIGHT}-${index}`, name: ""})}
-                                    hideXButton={true}
-                                    removeItem={handleRemoveItem}
-                                    />
+                    <div className={`
+                            flex flex-col items-center gap-2
+                            ${(expanded && isSmall) ? 'relative justify-center w-full h-full ' : ' mt-6 sm:mt-1 '}
+                        `}>
+                        {expanded && isSmall && (
+                            <div className="absolute left-0 top-12 z-55 border border-1 text-sm">
+                                {race?.category} - {race.type} - {race.distance}
                             </div>
-                            
+                        )}
+                        <div className={`${(expanded && isSmall) ? 'absolute top-0 z-50 w-full' : ''}`}>
+                            <HorizontalLineGauge
+                                value={checkBoatBalance(boardSetup, boatType)?.sideBalance.value}
+                                GHeight={8}
+                                toleranceMin={-state.settings.sideWeightTolerance}
+                                toleranceMax={state.settings.sideWeightTolerance}
+                            />
+                        </div>
+                        <div className={`flex flex-col items-center gap-1
+                                ${(expanded && isSmall) ? 'scale-[120%]' : ''}
+                            `}>
+                            <SortableColumn 
+                                key={BoatPosition.DRUMMER} 
+                                id={"DRUMMER"}
+                                rows={items[BoatPosition.DRUMMER].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.DRUMMER}-${index}`, name: ""})}
+                                hideXButton={true}
+                                removeItem={handleRemoveItem}
+                                />
+
+                            <div className={`
+                                text-gray-900 ring-2 ring-orange-200
+                                dark:focus:ring-teal-700 
+                                rounded-full p-2 w-8 h-8
+                            `}/>
+
+                            <div className={`flex gap-6`}>
+                                <div className={`flex gap-1`}>
+                                    <SortableColumn 
+                                        key={BoatPosition.LEFT} 
+                                        id={"LEFT"}
+                                        rows={items[BoatPosition.LEFT].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.LEFT}-${index}`, name: ""})}
+                                        hideXButton={true}
+                                        removeItem={handleRemoveItem}
+                                        />
+                                    
+                                    <SortableColumn 
+                                        key={BoatPosition.RIGHT} 
+                                        id={"RIGHT"}
+                                        rows={items[BoatPosition.RIGHT].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.RIGHT}-${index}`, name: ""})}
+                                        hideXButton={true}
+                                        removeItem={handleRemoveItem}
+                                        />
+                                </div>
+                                
+                            </div>
+
+                            <SortableColumn 
+                                key={BoatPosition.SWEEP} 
+                                id={"SWEEP"}
+                                rows={items[BoatPosition.SWEEP].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.SWEEP}-${index}`, name: ""})}
+                                hideXButton={true}
+                                removeItem={handleRemoveItem}
+                                />
+                        </div>
+
+                    </div>
+                    <div className={`${(expanded && isSmall) ? '' : 'flex items-end ml-5 sm:ml-2'}`}>
+                        <div className={`${(expanded && isSmall) ? 'absolute right-0 z-50 h-full flex items-center' : ''}`}>
                             <VerticalLineGauge
                                 value={checkBoatBalance(boardSetup, boatType)?.lineBalance.value}
                                 GWidth={8}
-                                GHeight={400}
+                                GHeight={(expanded && isSmall) ? 800 : 400}
                                 toleranceMin={-state.settings.lineWeightTolerance}
                                 toleranceMax={state.settings.lineWeightTolerance}
                             />
                         </div>
-
-                        <SortableColumn 
-                            key={BoatPosition.SWEEP} 
-                            id={"SWEEP"}
-                            rows={items[BoatPosition.SWEEP].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.SWEEP}-${index}`, name: ""})}
-                            hideXButton={true}
-                            removeItem={handleRemoveItem}
-                            />
-
                     </div>
                 </div>
             )}
+
+            {/* Expand/focus button: toggle fullscreen view of boat structure */}
+            <button
+                aria-pressed={expanded}
+                onClick={() => { if (isSmall) setExpanded(v => !v) }}
+                className={`
+                    fixed bottom-4 right-4 z-[1100] md:hidden inline-flex items-center justify-center w-12 h-12 
+                    rounded-full bg-white text-slate-800 shadow-lg border
+                `}
+                title={expanded ? 'Close full view' : 'Expand boat view'}
+            >
+                <span className="sr-only">{expanded ? 'Close full view' : 'Expand boat view'}</span>
+                {expanded ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L9 7.586V5a1 1 0 112 0v4a1 1 0 01-1 1H6a1 1 0 110-2h2.586L5.707 5.707a1 1 0 010-1.414zM15.707 15.707a1 1 0 01-1.414 0L11 12.414V15a1 1 0 11-2 0v-4a1 1 0 011-1h4a1 1 0 110 2h-2.586l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                    </svg>
+                ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 110 2H5v2a1 1 0 11-2 0V4zm14 0v3a1 1 0 11-2 0V5h-2a1 1 0 110-2h3a1 1 0 011 1zM3 16v-3a1 1 0 112 0v2h2a1 1 0 110 2H4a1 1 0 01-1-1zm14 0a1 1 0 00-1 1h-3a1 1 0 110-2h2v-2a1 1 0 112 0v3z" clipRule="evenodd" />
+                    </svg>
+                )}
+            </button>
+
+            {/* When expanded, the parent container above becomes fixed and the gauges are positioned to the page edges via conditional classes */}
 
             {/* Floating Reserves button for small screens (fixed, bottom-right) */}
             <button
                 aria-expanded={reserveOpen}
                 aria-controls="reserve-panel"
-                onClick={() => setReserveOpen(true)}
-                className="fixed bottom-4 left-4 z-50 md:hidden inline-flex items-center justify-center w-12 h-12 rounded-full bg-sky-600 text-white shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400"
+                onClick={() => { if (isSmall) setReserveOpen(true) }}
+                className={`
+                    fixed bottom-4 left-4 ${(expanded && isSmall) ? 'z-[1115]' : 'z-50'} md:hidden inline-flex 
+                    items-center justify-center w-12 h-12 rounded-full bg-sky-600 text-white shadow-lg 
+                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400
+                `}
                 title="Open reserves"
             >
                 <span className="sr-only">Open reserves</span>
@@ -279,12 +437,19 @@ export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType
             <div
                 id="reserve-panel"
                 aria-hidden={!reserveOpen}
-                className={`fixed bottom-0 left-0 h-[70vh] z-50 transform transition-transform duration-300 ease-in-out md:hidden ${reserveOpen ? 'translate-x-0' : '-translate-x-full'}`}
-                style={{ width: '18rem' }}
+                className={`
+                    fixed bottom-0 left-0 h-[70vh] ${(expanded && isSmall) ? 'z-[1120]' : 'z-50'} 
+                    transform transition-all duration-300 ease-in-out md:hidden 
+                    ${reserveOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'}
+                `}
+                style={{ width: '10rem' }}
             >
-                {/* backdrop overlay */}
-                <div className={`fixed bottom-0 left-0 bg-black/40 ${reserveOpen ? 'block' : 'hidden'}`} onClick={() => setReserveOpen(false)} />
-                <div className={`relative h-full w-[170px] bg-white p-4 shadow-lg overflow-auto`}> 
+                {/* backdrop overlay (appear under the panel but above expanded container when expanded) */}
+                <div className={`${reserveOpen ? 'block' : 'hidden'} fixed inset-0 ${(expanded && isSmall) ? 'z-[1119]' : 'z-40'} bg-black/40`} onClick={() => setReserveOpen(false)} />
+                <div className={`
+                    relative h-full w-[170px] bg-white p-4 shadow-lg overflow-auto 
+                    ${(expanded && isSmall) ? 'z-[1120]' : 'z-50'}
+                `} style={{ WebkitOverflowScrolling: 'touch' }}> 
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-medium">Reserves</h3>
                         <button aria-label="Close reserves" onClick={() => setReserveOpen(false)} 
@@ -292,8 +457,9 @@ export const BoatStructure = ({ boatType, boardSetup, updateConfig }: { boatType
                     </div>
                     {items && (
                         <SortableColumn 
-                            key={`${BoatPosition.RESERVE}-panel`} 
-                            id={"RESERVE"}
+                            key={`${BoatPosition.RESERVE}-panel`}
+                            type={`panel`} 
+                            id={"RESERVE-panel"}
                             rows={items[BoatPosition.RESERVE].map(id => paddlers?.find(p => String(p.id) === String(id)) || {id, name: "Empty Seat"} as any)}/>
                     )}
                 </div>

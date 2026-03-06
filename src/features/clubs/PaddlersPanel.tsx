@@ -95,6 +95,9 @@ function SmallControlsMenu({ onAdd, onExportJSON, onExportCSV, onImport, onDelet
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
+  const btnRef = useRef<HTMLButtonElement | null>(null)
+  const itemRefs = useRef<Array<HTMLElement | null>>([])
+  const [focusIndex, setFocusIndex] = useState<number>(-1)
 
   useEffect(() => {
     if (!open) return undefined
@@ -107,9 +110,68 @@ function SmallControlsMenu({ onAdd, onExportJSON, onExportCSV, onImport, onDelet
     return () => document.removeEventListener('click', handler)
   }, [open])
 
+  // Keyboard handling: Escape to close, Arrow navigation, Enter/Space to activate
+  useEffect(() => {
+    if (!open) return undefined
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false)
+        // return focus to toggle button
+        setTimeout(() => btnRef.current?.focus())
+        return
+      }
+
+      const items = itemRefs.current
+      if (!items || items.length === 0) return
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setFocusIndex(i => {
+          const next = Math.min(items.length - 1, Math.max(0, i + 1))
+          return next === -1 ? 0 : next
+        })
+        return
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setFocusIndex(i => {
+          const prev = i <= 0 ? items.length - 1 : i - 1
+          return prev
+        })
+        return
+      }
+
+      if (e.key === 'Enter' || e.key === ' ') {
+        // Activate currently focused item
+        if (focusIndex >= 0 && items[focusIndex]) {
+          e.preventDefault()
+          ;(items[focusIndex] as HTMLElement).click()
+        }
+      }
+    }
+
+    document.addEventListener('keydown', keyHandler)
+    return () => document.removeEventListener('keydown', keyHandler)
+  }, [open, focusIndex])
+
+  // Focus the first menu item when opening
+  useEffect(() => {
+    if (open) {
+      setFocusIndex(0)
+      setTimeout(() => {
+        const first = itemRefs.current[0]
+        if (first) (first as HTMLElement).focus()
+      })
+    } else {
+      setFocusIndex(-1)
+    }
+  }, [open])
+
   return (
     <div ref={menuRef} className="relative inline-block text-left">
       <button
+        ref={btnRef}
         onClick={() => setOpen(v => !v)}
         aria-haspopup="true"
         aria-expanded={open}
@@ -124,14 +186,19 @@ function SmallControlsMenu({ onAdd, onExportJSON, onExportCSV, onImport, onDelet
       {open && (
         <div className="absolute right-0 mt-2 w-48 origin-top-right bg-white border rounded shadow-lg z-50">
           <div className="py-1">
-            <button onClick={() => { setOpen(false); onAdd() }} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Add member</button>
-            <button onClick={() => { setOpen(false); onExportJSON() }} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Export JSON</button>
-            <button onClick={() => { setOpen(false); onExportCSV() }} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Export CSV</button>
-            <label className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 cursor-pointer">
-              <span>Import</span>
-              <input ref={fileRef} type="file" accept=".json,.csv,application/json,text/csv" className="sr-only" onChange={(e) => { setOpen(false); onImport(e); if (fileRef.current) fileRef.current.value = '' }} />
-            </label>
-            <button onClick={() => { setOpen(false); onDelete() }} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-slate-50">Delete club</button>
+            <button ref={el => { itemRefs.current[0] = el }} onClick={() => { setOpen(false); onAdd() }} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50" tabIndex={0}>Add member</button>
+            <button ref={el => { itemRefs.current[1] = el }} onClick={() => { setOpen(false); onExportJSON() }} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50" tabIndex={0}>Export JSON</button>
+            <button ref={el => { itemRefs.current[2] = el }} onClick={() => { setOpen(false); onExportCSV() }} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50" tabIndex={0}>Export CSV</button>
+            <button
+              ref={el => { itemRefs.current[3] = el }}
+              onClick={() => { fileRef.current?.click(); setOpen(false) }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+              tabIndex={0}
+            >
+              Import
+              <input ref={fileRef} type="file" accept=".json,.csv,application/json,text/csv" className="sr-only" onChange={(e) => { onImport(e); if (fileRef.current) fileRef.current.value = '' }} />
+            </button>
+            <button ref={el => { itemRefs.current[4] = el }} onClick={() => { setOpen(false); onDelete() }} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-slate-50" tabIndex={0}>Delete club</button>
           </div>
         </div>
       )}

@@ -22,17 +22,7 @@ export function ListWidget({
                            }: Props) {
 
     const [isExpanded, setIsExpanded] = useState(selectedIndex < 0)
-    // const [index, setIndex] = useState<number | null>(selectedIndex)
-
-    // useEffect(() => {
-    //     if (index !== null && setSelection) {
-    //         setIsExpanded(false)
-    //         setSelection(items[index])
-    //     }
-    // }, [index, items, setSelection])
-
-    logger.debug("Rendering ListWidget with items", selectedIndex, isExpanded);
-
+    
     return (
         <div className={`
             w-[22rem] rounded-lg ring-1 overflow-hidden
@@ -60,11 +50,12 @@ export function ListWidget({
                             group relative flex items-center h-10 px-3 py-2 cursor-pointer
                             ${selectedIndex=== idx ? selectedColor : "hover:bg-gray-100"}
                         `}
-                         onClick={() => {
-                            logger.debug("Selected item", str, "at index", idx + 1)
-                            setSelection(str)
-                            // setIndex(idx)
-                         }}
+                                 onClick={() => {
+                                     logger.debug("Selected item", str, "at index", idx + 1)
+                                     setSelection?.(str)
+                                     // collapse list when selection made
+                                     setIsExpanded(true)
+                                 }}
                          title={str}
                     >
                         <span className={`text-xs text-gray-400`}>{idx + 1}</span>

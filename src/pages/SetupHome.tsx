@@ -29,14 +29,7 @@ export default function SetupHome({clubId}:{clubId?:string}) {
         let mounted = true
         const load = async () => {
             logger.debug("Attempting to load regatta configs from localStorage and Firestore for club", clubId)
-            // load local configs first
             let local: Record<string, Regatta> = {}
-            // try {
-            //     const raw = localStorage.getItem('regattaConfigs')
-            //     if (raw) local = JSON.parse(raw)
-            // } catch (e) {
-            //     logger.debug('Failed to parse local regattaConfigs', e)
-            // }
 
             // load remote regattas for the provided clubId (if any)
             let remote: Record<string, Regatta> = {}
@@ -262,7 +255,7 @@ export default function SetupHome({clubId}:{clubId?:string}) {
             </header>
 
             <div className={`grid grid-cols-1 gap-4`}>
-                <div className='flex gap-2'>
+                <div className='flex gap-2 items-start'>
                         <ListWidget
                             label={`Saved configurations`}
                             items={Object.keys(allRegattas ?? {})}

@@ -299,7 +299,7 @@ export const BoatStructure = ({ race, boatType, boardSetup, updateConfig }: { ra
                     role={expanded && isSmall ? 'dialog' : undefined}
                     aria-modal={expanded && isSmall ? true : undefined}
                     aria-label={expanded && isSmall ? 'Boat full view' : undefined}
-                    className={`flex gap-2 ${(expanded && isSmall) ? 'items-stretch fixed inset-0 z-[1050] bg-white overflow-auto' : 'p-6'}`}>
+                    className={`flex gap-2 ${(expanded && isSmall) ? 'items-stretch fixed inset-0 z-[1050] bg-white overflow-auto' : 'p-2'}`}>
                     {/* Reserve column: inline on md+, slide-out panel on small screens */}
                     <div className="hidden md:block" style={{ pointerEvents: 'auto' }}>
                         <SortableColumn 
@@ -316,7 +316,11 @@ export const BoatStructure = ({ race, boatType, boardSetup, updateConfig }: { ra
                             ${(expanded && isSmall) ? 'relative justify-center w-full h-full ' : ' mt-6 sm:mt-1 '}
                         `}>
                         {expanded && isSmall && (
-                            <div className="absolute left-0 top-12 z-55 border border-1 text-sm">
+                            <div className={`
+                                absolute -left-2 top-12 z-55 border border-1 text-base py-1 px-3
+                                text-gray-500 pr-12
+                                rounded-r-xl
+                            `}>
                                 {race?.category} - {race.type} - {race.distance}
                             </div>
                         )}

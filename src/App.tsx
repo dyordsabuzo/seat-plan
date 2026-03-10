@@ -39,8 +39,8 @@ function App() {
                 <Routes>
                     <Route path="/login" element={<LoginPage/>} />
 
-                    {/* <Route path="/" element={<RequireAuth><Outlet/></RequireAuth>}> */}
-                    <Route path="/" element={<MainLayout/>}>
+                    <Route path="/" element={<RequireAuth><MainLayout/></RequireAuth>}>
+                    {/* <Route path="/" element={<MainLayout/>}> */}
                         <Route index element={<ClubsPage/>}/>
                         <Route path="manage" element={<Manage/>}/>
                         <Route path="category" element={<RaceAgeCategory/>}/>

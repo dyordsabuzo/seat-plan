@@ -10,6 +10,8 @@ const UserFloating: React.FC = () => {
   const [showImage, setShowImage] = useState<boolean>(Boolean(user && (user as any).photoURL))
   const [expanded, setExpanded] = useState<boolean>(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const [hideTranslate, setHideTranslate] = useState<number>(260)
+  const avatarWidth = 40 // px; approximate visible avatar width when collapsed
 
   useEffect(() => {
     // When expanded, close if clicking outside the container
@@ -24,6 +26,20 @@ const UserFloating: React.FC = () => {
     document.addEventListener('click', handler)
     return () => document.removeEventListener('click', handler)
   }, [expanded])
+
+  // measure container width to compute translate distance for smooth hide/show
+  useEffect(() => {
+    const measure = () => {
+      const el = containerRef.current
+      if (!el) return
+      const w = el.getBoundingClientRect().width || 0
+      const translate = Math.max(0, w - avatarWidth)
+      setHideTranslate(translate)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
 
   if (!user) return null
 
@@ -47,9 +63,16 @@ const UserFloating: React.FC = () => {
   }
 
   return (
-    <div className={`fixed top-12 
-            ${expanded ? '-right-2' : '-right-[260px]'} z-50
-        `} role="region" aria-label="User profile">
+    <div
+      role="region"
+      aria-label="User profile"
+      className="fixed top-1 right-3 z-50"
+      style={{
+        transform: expanded ? 'translateX(0)' : `translateX(${hideTranslate}px)`,
+        transition: 'transform 320ms cubic-bezier(0.2,0.8,0.2,1)',
+        willChange: 'transform'
+      }}
+    >
       <div
         ref={containerRef}
         className={`
@@ -58,7 +81,7 @@ const UserFloating: React.FC = () => {
             w-[320px]
             `}
             tabIndex={0}
-            >
+      >
           {/* ${expanded ? 'w-[320px]' : 'w-14'} */}
         <div
           onClick={handleAvatarClick}

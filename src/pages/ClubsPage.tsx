@@ -4,6 +4,7 @@ import ConfirmModal from '../components/complex/modals/ConfirmModal'
 import Tabs from '../components/ui/Tabs'
 import { useAuth } from '../context/AuthContext'
 import { useOptions } from '../context/OptionsContext'
+import { useRegattaState } from '../context/RegattaContext'
 import { useToast } from '../context/ToastContext'
 import PaddlersPanel from '../features/clubs/PaddlersPanel'
 import useClubs, { Club } from '../hooks/useClubs'
@@ -51,6 +52,7 @@ export default function ClubsPage() {
 
   // number of local clubs/paddlers found (for modal message)
   const [migrationInfo, setMigrationInfo] = useState<{ clubs: number; paddlers: number }>({ clubs: 0, paddlers: 0 })
+  const {setClubId} = useRegattaState()
 
   // detect sign-in transition: if user just signed in and local clubs exist, prompt migration
   React.useEffect(() => {
@@ -324,7 +326,10 @@ export default function ClubsPage() {
             {clubs.map(c => (
               <button
                 key={c.id}
-                onClick={() => setSelectedClubId(c.id)}
+                onClick={() => {
+                  setClubId(c.id);
+                  setSelectedClubId(c.id);
+                }}
                 className={`w-full text-left px-3 py-2 rounded border ${selectedClubId === c.id ? 'bg-sky-50 border-sky-300' : 'bg-white'} hover:bg-sky-50`}
               >
                 <div className="flex items-center justify-between">

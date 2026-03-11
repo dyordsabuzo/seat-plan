@@ -10,6 +10,7 @@ export const RegattaStateContext = createContext(null)
 
 export function RegattaProvider({children}) {
     const [state, setState] = useState<Regatta | null>(null)
+    const [clubId, setClubId] = useState<string | null>(null)
     const { user } = useAuth()
 
     // const value: any = [state, setState, actions]
@@ -53,7 +54,7 @@ export function RegattaProvider({children}) {
             if (state && state.name) {
                 logger.debug("Persisting regatta state (manual)", state);
                 if (user && user.uid) {
-                    RegattasStorage.upsertRegatta(user.uid, undefined, state).catch(e => {
+                    RegattasStorage.upsertRegatta(user.uid, clubId, state).catch(e => {
                         logger.debug('Manual persist to Firestore failed', e)
                     })
                 } else {
@@ -76,7 +77,7 @@ export function RegattaProvider({children}) {
         persistState();
     }
 
-    const value: any = {state, setState, updateRaceConfig}
+    const value: any = {state, setState, clubId, setClubId, updateRaceConfig}
 
     return (
         <RegattaStateContext.Provider value={value}>

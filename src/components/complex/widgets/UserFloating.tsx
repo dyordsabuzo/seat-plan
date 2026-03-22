@@ -66,7 +66,7 @@ const UserFloating: React.FC = () => {
     <div
       role="region"
       aria-label="User profile"
-      className="fixed top-1 right-3 z-50"
+      className="fixed top-1 right-4 z-50"
       style={{
         transform: expanded ? 'translateX(0)' : `translateX(${hideTranslate}px)`,
         transition: 'transform 320ms cubic-bezier(0.2,0.8,0.2,1)',

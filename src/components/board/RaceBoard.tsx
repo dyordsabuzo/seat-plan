@@ -38,6 +38,7 @@ export default function RaceBoard({race}: Props) {
     const [configNames, setConfigNames] = useState<string[]>(race.configs.length < 2 ? ["Config 1"] : race.configs.map((_, index) => `Config ${index + 1}`))
     const [boardSetup, setBoardSetup] = useState<any>(null)
     const {updateRaceConfig} = useRegattaState()
+    // const {state:setup} = useSetupState();
 
     useEffect(() => {
         setSelectedConfigIndex(null);
@@ -163,11 +164,10 @@ export default function RaceBoard({race}: Props) {
             </div>
                 
             {boardSetup && (
-                <div className={`w-full flex flex-col items-center py-4 sm:flex-row sm:gap-4`}>
                     <BoatStructure 
                         race={race}
                         boatType={race.boatType} 
-                        boardSetup={race.configs[selectedConfigIndex]}
+                        boardSetup={boardSetup}
                         updateConfig={
                             (config) => {
                                 logger.debug("Updating config", {config, selectedConfigIndex})
@@ -176,7 +176,6 @@ export default function RaceBoard({race}: Props) {
                                     updateRaceConfig(race);
                                 }
                             }}/>
-                </div>
             )}
         </div>
     );

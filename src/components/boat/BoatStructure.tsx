@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BoatPosition } from "../../enums/BoatConstant";
 // import { Draggable, Item } from "./BoatElement";
 import { defaultPreset, KeyboardSensor, PointerSensor } from '@dnd-kit/dom';
@@ -6,34 +6,77 @@ import { move } from "@dnd-kit/helpers";
 import { DragDropProvider } from "@dnd-kit/react";
 import { logger } from "../../common/helpers/logger";
 import { useSetupState } from "../../context/SetupContext";
-import HorizontalLineGauge from "../complex/gauge/HorizontalLineGauge";
-import VerticalLineGauge from "../complex/gauge/VerticalLineGauge";
-import { SortableColumn } from "./BoatSection";
+import BoatLayoutPanel from "./BoatLayoutPanel";
+import BoatStatisticsPanel from "./BoatStatisticsPanel";
+import ReserveSlideOutPanel from "./ReserveSlideOutPanel";
 
-export const BoatStructure = ({ race, boatType, boardSetup, updateConfig }: { race: any, boatType: string, boardSetup: any, updateConfig: (config: any) => void }) => {
+export type Props = { 
+    race: any, 
+    boatType: string, 
+    boardSetup: any,
+    viewOnly?: boolean;
+    updateConfig?: (config: any) => void 
+};
+
+const createItemsByPosition = (setup: any) => ({
+    [BoatPosition.RESERVE]: setup?.[BoatPosition.RESERVE]?.map((item: any) => String(item.id)) || [],
+    [BoatPosition.DRUMMER]: setup?.[BoatPosition.DRUMMER]?.map((item: any) => String(item.id)) || [],
+    [BoatPosition.LEFT]: setup?.[BoatPosition.LEFT]?.map((item: any) => String(item.id)) || [],
+    [BoatPosition.RIGHT]: setup?.[BoatPosition.RIGHT]?.map((item: any) => String(item.id)) || [],
+    [BoatPosition.SWEEP]: setup?.[BoatPosition.SWEEP]?.map((item: any) => String(item.id)) || [],
+});
+
+const areItemsEqual = (a: any, b: any) => {
+    const positions = [BoatPosition.RESERVE, BoatPosition.DRUMMER, BoatPosition.LEFT, BoatPosition.RIGHT, BoatPosition.SWEEP];
+    return positions.every((position) => {
+        const left = a?.[position] || [];
+        const right = b?.[position] || [];
+
+        if (left.length !== right.length) return false;
+        for (let index = 0; index < left.length; index += 1) {
+            if (String(left[index]) !== String(right[index])) return false;
+        }
+        return true;
+    });
+};
+
+export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, updateConfig }: Props) => {
     const [backup, setBackup] = useState(null);
     const {state, checkBoatBalance} = useSetupState();
+    const parsedBoardSetup = useMemo(() => {
+        if (typeof boardSetup === "string") {
+            logger.debug("Parsing boardSetup string", boardSetup);
+            return JSON.parse(boardSetup);
+        }
+        return boardSetup;
+    }, [boardSetup]);
 
-    logger.debug("Rendering BoatStructure with boardSetup", boardSetup, "and boatType", boatType)
-    if (typeof boardSetup === "string") {
-        logger.debug("Parsing boardSetup string", boardSetup)
-        boardSetup = JSON.parse(boardSetup);
-    }
+    const paddlers = useMemo(
+        () => parsedBoardSetup?.reduce((acc: any[], position: any[]) => acc.concat(position), []) || [],
+        [parsedBoardSetup]
+    );
 
-    const paddlers = boardSetup && boardSetup.reduce((acc, position) => {
-        return acc.concat(position);
-    }, []);
+    const paddlersById = useMemo(() => {
+        const index = new Map<string, any>();
+        paddlers.forEach((paddler: any) => {
+            if (paddler?.id !== undefined) {
+                index.set(String(paddler.id), paddler);
+            }
+        });
+        return index;
+    }, [paddlers]);
 
-    const sensors = [
+    const sensors = useMemo(() => [
         PointerSensor.configure({
             activatorElements(source) {
             return [source.element, source.handle];
             },
         }),
         KeyboardSensor,
-    ];
+    ], []);
 
-    const [items, setItems] = useState(null);
+    const [items, setItems] = useState(createItemsByPosition(parsedBoardSetup));
+
     const [reserveOpen, setReserveOpen] = useState(false)
     const [expanded, setExpanded] = useState(false)
     const [isSmall, setIsSmall] = useState<boolean>(false)
@@ -144,32 +187,32 @@ export const BoatStructure = ({ race, boatType, boardSetup, updateConfig }: { ra
     }, [expanded, isSmall])
     
     useEffect(() => {
-        if (boardSetup) {
-            setItems({
-                [BoatPosition.RESERVE]: boardSetup[BoatPosition.RESERVE].map((item) => String(item.id)) || [],
-                [BoatPosition.DRUMMER]: boardSetup[BoatPosition.DRUMMER].map((item) => String(item.id)) || [],
-                [BoatPosition.LEFT]: boardSetup[BoatPosition.LEFT].map((item) => String(item.id)) || [],
-                [BoatPosition.RIGHT]: boardSetup[BoatPosition.RIGHT].map((item) => String(item.id)) || [],
-                [BoatPosition.SWEEP]: boardSetup[BoatPosition.SWEEP].map((item) => String(item.id)) || [],
-            });
-        }
-        return () => {};
-    // eslint-disable-next-line         
-    }, [boardSetup]);
+        if (!parsedBoardSetup) return;
+        const nextItems = createItemsByPosition(parsedBoardSetup);
+        setItems((prevItems: any) => (areItemsEqual(prevItems, nextItems) ? prevItems : nextItems));
+        checkBoatBalance(parsedBoardSetup, boatType);
+    }, [parsedBoardSetup, boatType, checkBoatBalance]);
 
     useEffect(() => {
-        if (items !== null && boardSetup) {
-            boardSetup[BoatPosition.RESERVE] = items[BoatPosition.RESERVE].map(id => paddlers.find(p => String(p.id) === String(id)) || {id});
-            boardSetup[BoatPosition.DRUMMER] = items[BoatPosition.DRUMMER].map(id => paddlers.find(p => String(p.id) === String(id)) || {id});
-            boardSetup[BoatPosition.LEFT] = items[BoatPosition.LEFT].map(id => paddlers.find(p => String(p.id) === String(id)) || {id});
-            boardSetup[BoatPosition.RIGHT] = items[BoatPosition.RIGHT].map(id => paddlers.find(p => String(p.id) === String(id)) || {id});
-            boardSetup[BoatPosition.SWEEP] = items[BoatPosition.SWEEP].map(id => paddlers.find(p => String(p.id) === String(id)) || {id});
+        if (items !== null && parsedBoardSetup) {
+            const currentSetupItems = createItemsByPosition(parsedBoardSetup);
+            if (areItemsEqual(items, currentSetupItems)) {
+                return;
+            }
 
-            updateConfig(boardSetup);
+            parsedBoardSetup[BoatPosition.RESERVE] = items[BoatPosition.RESERVE].map((id: any) => paddlersById.get(String(id)) || {id});
+            parsedBoardSetup[BoatPosition.DRUMMER] = items[BoatPosition.DRUMMER].map((id: any) => paddlersById.get(String(id)) || {id});
+            parsedBoardSetup[BoatPosition.LEFT] = items[BoatPosition.LEFT].map((id: any) => paddlersById.get(String(id)) || {id});
+            parsedBoardSetup[BoatPosition.RIGHT] = items[BoatPosition.RIGHT].map((id: any) => paddlersById.get(String(id)) || {id});
+            parsedBoardSetup[BoatPosition.SWEEP] = items[BoatPosition.SWEEP].map((id: any) => paddlersById.get(String(id)) || {id});
+
+            checkBoatBalance(parsedBoardSetup, boatType);
+
+            if (updateConfig) {
+                updateConfig(parsedBoardSetup);
+            }
         }
-        return () => {};
-    // eslint-disable-next-line 
-    }, [items]);
+    }, [items, parsedBoardSetup, paddlersById, boatType, checkBoatBalance, updateConfig]);
 
     const sanitiseItems = () => {
         // drummer
@@ -281,193 +324,115 @@ export const BoatStructure = ({ race, boatType, boardSetup, updateConfig }: { ra
         setItems((items) => move(items, event));
     };
 
-    // let snapshot = structuredClone(items);
+    const reserveRows = useMemo(
+        () => items[BoatPosition.RESERVE].map((id: any) => paddlersById.get(String(id)) || {id, name: "Empty Seat"} as any),
+        [items, paddlersById]
+    );
+    const drummerRows = useMemo(
+        () => items[BoatPosition.DRUMMER].map((id: any, index: number) => paddlersById.get(String(id)) || {id: `${BoatPosition.DRUMMER}-${index}`, name: ""}),
+        [items, paddlersById]
+    );
+    const leftRows = useMemo(
+        () => items[BoatPosition.LEFT].map((id: any, index: number) => paddlersById.get(String(id)) || {id: `${BoatPosition.LEFT}-${index}`, name: ""}),
+        [items, paddlersById]
+    );
+    const rightRows = useMemo(
+        () => items[BoatPosition.RIGHT].map((id: any, index: number) => paddlersById.get(String(id)) || {id: `${BoatPosition.RIGHT}-${index}`, name: ""}),
+        [items, paddlersById]
+    );
+    const sweepRows = useMemo(
+        () => items[BoatPosition.SWEEP].map((id: any, index: number) => paddlersById.get(String(id)) || {id: `${BoatPosition.SWEEP}-${index}`, name: ""}),
+        [items, paddlersById]
+    );
 
+    logger.debug("Rendering BoatStructure", {boardSetup: parsedBoardSetup, items, paddlers, race})
     return (
-        <DragDropProvider
-            plugins={defaultPreset.plugins}
-            sensors={sensors}
-            onDragStart={(event) => {
-                // snapshot = structuredClone(items);
-                setBackup(structuredClone(items));
-            }}
-            onDragOver={handleDragOver}                        
-            onDragEnd={handleDragEnd}>
-            {items && (
-                <div
-                    ref={containerRef}
-                    role={expanded && isSmall ? 'dialog' : undefined}
-                    aria-modal={expanded && isSmall ? true : undefined}
-                    aria-label={expanded && isSmall ? 'Boat full view' : undefined}
-                    className={`flex gap-2 ${(expanded && isSmall) ? 'items-stretch fixed inset-0 z-[1050] bg-white overflow-auto' : 'p-2'}`}>
-                    {/* Reserve column: inline on md+, slide-out panel on small screens */}
-                    <div className="hidden md:block" style={{ pointerEvents: 'auto' }}>
-                        <SortableColumn 
-                            key={BoatPosition.RESERVE}
-                            id={"RESERVE"}
-                            rows={items[BoatPosition.RESERVE].map(id => paddlers?.find(p => String(p.id) === String(id)) || {id, name: "Empty Seat"} as any)}/>
-                    </div>
+        <div className={`w-full flex flex-col items-center sm:gap-4`}>
+            <DragDropProvider
+                plugins={defaultPreset.plugins}
+                sensors={sensors}
+                onDragStart={(event) => {
+                    // snapshot = structuredClone(items);
+                    setBackup(structuredClone(items));
+                }}
+                onDragOver={handleDragOver}                        
+                onDragEnd={handleDragEnd}>
+                <BoatLayoutPanel
+                    items={items}
+                    reserveOpen={reserveOpen}
+                    expanded={expanded}
+                    isSmall={isSmall}
+                    containerRef={containerRef}
+                    race={race}
+                    viewOnly={viewOnly}
+                    reserveRows={reserveRows}
+                    drummerRows={drummerRows}
+                    leftRows={leftRows}
+                    rightRows={rightRows}
+                    sweepRows={sweepRows}
+                    sideBalanceValue={state.sideBalance?.value}
+                    lineBalanceValue={state.lineBalance?.value}
+                    sideWeightTolerance={state.settings.sideWeightTolerance}
+                    lineWeightTolerance={state.settings.lineWeightTolerance}
+                    handleRemoveItem={handleRemoveItem}
+                />
 
-                    {/* Small-screen placeholder (floating button provided outside main flow) */}
-                    <div className="md:hidden" />
-
-                    <div className={`
-                            flex flex-col items-center gap-2
-                            ${(expanded && isSmall) ? 'relative justify-center w-full h-full ' : ' mt-6 sm:mt-1 '}
-                        `}>
-                        {expanded && isSmall && (
-                            <div className={`
-                                absolute -left-2 top-12 z-55 border border-1 text-base py-1 px-3
-                                text-gray-500 pr-12
-                                rounded-r-xl
-                            `}>
-                                {race?.category} - {race.type} - {race.distance}
-                            </div>
-                        )}
-                        <div className={`${(expanded && isSmall) ? 'absolute top-0 z-50 w-full' : ''}`}>
-                            <HorizontalLineGauge
-                                value={checkBoatBalance(boardSetup, boatType)?.sideBalance.value}
-                                GHeight={8}
-                                toleranceMin={-state.settings.sideWeightTolerance}
-                                toleranceMax={state.settings.sideWeightTolerance}
-                            />
-                        </div>
-                        <div className={`flex flex-col items-center gap-1
-                                ${(expanded && isSmall) ? 'scale-[120%]' : ''}
-                            `}>
-                            <SortableColumn 
-                                key={BoatPosition.DRUMMER} 
-                                id={"DRUMMER"}
-                                rows={items[BoatPosition.DRUMMER].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.DRUMMER}-${index}`, name: ""})}
-                                hideXButton={true}
-                                removeItem={handleRemoveItem}
-                                />
-
-                            <div className={`
-                                text-gray-900 ring-2 ring-orange-200
-                                dark:focus:ring-teal-700 
-                                rounded-full p-2 w-8 h-8
-                            `}/>
-
-                            <div className={`flex gap-6`}>
-                                <div className={`flex gap-1`}>
-                                    <SortableColumn 
-                                        key={BoatPosition.LEFT} 
-                                        id={"LEFT"}
-                                        rows={items[BoatPosition.LEFT].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.LEFT}-${index}`, name: ""})}
-                                        hideXButton={true}
-                                        removeItem={handleRemoveItem}
-                                        />
-                                    
-                                    <SortableColumn 
-                                        key={BoatPosition.RIGHT} 
-                                        id={"RIGHT"}
-                                        rows={items[BoatPosition.RIGHT].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.RIGHT}-${index}`, name: ""})}
-                                        hideXButton={true}
-                                        removeItem={handleRemoveItem}
-                                        />
-                                </div>
-                                
-                            </div>
-
-                            <SortableColumn 
-                                key={BoatPosition.SWEEP} 
-                                id={"SWEEP"}
-                                rows={items[BoatPosition.SWEEP].map((id, index) => paddlers?.find(p => String(p.id) === String(id)) || {id: `${BoatPosition.SWEEP}-${index}`, name: ""})}
-                                hideXButton={true}
-                                removeItem={handleRemoveItem}
-                                />
-                        </div>
-
-                    </div>
-                    <div className={`${(expanded && isSmall) ? '' : 'flex items-end ml-5 sm:ml-2'}`}>
-                        <div className={`${(expanded && isSmall) ? 'absolute right-0 z-50 h-full flex items-center' : ''}`}>
-                            <VerticalLineGauge
-                                value={checkBoatBalance(boardSetup, boatType)?.lineBalance.value}
-                                GWidth={8}
-                                GHeight={(expanded && isSmall) ? 800 : 400}
-                                toleranceMin={-state.settings.lineWeightTolerance}
-                                toleranceMax={state.settings.lineWeightTolerance}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Expand/focus button: toggle fullscreen view of boat structure */}
-            <button
-                aria-pressed={expanded}
-                onClick={() => { if (isSmall) setExpanded(v => !v) }}
-                className={`
-                    fixed bottom-4 right-4 z-[1100] md:hidden inline-flex items-center justify-center w-12 h-12 
-                    rounded-full bg-white text-slate-800 shadow-lg border
-                `}
-                title={expanded ? 'Close full view' : 'Expand boat view'}
-            >
-                <span className="sr-only">{expanded ? 'Close full view' : 'Expand boat view'}</span>
-                {expanded ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L9 7.586V5a1 1 0 112 0v4a1 1 0 01-1 1H6a1 1 0 110-2h2.586L5.707 5.707a1 1 0 010-1.414zM15.707 15.707a1 1 0 01-1.414 0L11 12.414V15a1 1 0 11-2 0v-4a1 1 0 011-1h4a1 1 0 110 2h-2.586l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                    </svg>
-                ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 110 2H5v2a1 1 0 11-2 0V4zm14 0v3a1 1 0 11-2 0V5h-2a1 1 0 110-2h3a1 1 0 011 1zM3 16v-3a1 1 0 112 0v2h2a1 1 0 110 2H4a1 1 0 01-1-1zm14 0a1 1 0 00-1 1h-3a1 1 0 110-2h2v-2a1 1 0 112 0v3z" clipRule="evenodd" />
-                    </svg>
-                )}
-            </button>
-
-            {/* When expanded, the parent container above becomes fixed and the gauges are positioned to the page edges via conditional classes */}
-
-            {/* Floating Reserves button for small screens (fixed, bottom-right) */}
-            <button
-                aria-expanded={reserveOpen}
-                aria-controls="reserve-panel"
-                onClick={() => { if (isSmall) setReserveOpen(true) }}
-                className={`
-                    fixed bottom-4 left-4 ${(expanded && isSmall) ? 'z-[1115]' : 'z-50'} md:hidden inline-flex 
-                    items-center justify-center w-12 h-12 rounded-full bg-sky-600 text-white shadow-lg 
-                    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400
-                `}
-                title="Open reserves"
-            >
-                <span className="sr-only">Open reserves</span>
-                {/* simple icon: three stacked dots */}
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                    <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-            </button>
-
-            {/* Slide-out reserve panel for small screens (slides in from left) */}
-            <div
-                id="reserve-panel"
-                aria-hidden={!reserveOpen}
-                className={`
-                    fixed bottom-0 left-0 h-[70vh] ${(expanded && isSmall) ? 'z-[1120]' : 'z-50'} 
-                    transform transition-all duration-300 ease-in-out md:hidden 
-                    ${reserveOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'}
-                `}
-                style={{ width: '10rem' }}
-            >
-                {/* backdrop overlay (appear under the panel but above expanded container when expanded) */}
-                <div className={`${reserveOpen ? 'block' : 'hidden'} fixed inset-0 ${(expanded && isSmall) ? 'z-[1119]' : 'z-40'} bg-black/40`} onClick={() => setReserveOpen(false)} />
-                <div className={`
-                    relative h-full w-[170px] bg-white p-4 shadow-lg overflow-auto 
-                    ${(expanded && isSmall) ? 'z-[1120]' : 'z-50'}
-                `} style={{ WebkitOverflowScrolling: 'touch' }}> 
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-medium">Reserves</h3>
-                        <button aria-label="Close reserves" onClick={() => setReserveOpen(false)} 
-                            className="px-2 py-1 text-sm rounded bg-slate-100">Close</button>
-                    </div>
-                    {items && (
-                        <SortableColumn 
-                            key={`${BoatPosition.RESERVE}-panel`}
-                            type={`panel`} 
-                            id={"RESERVE-panel"}
-                            rows={items[BoatPosition.RESERVE].map(id => paddlers?.find(p => String(p.id) === String(id)) || {id, name: "Empty Seat"} as any)}/>
+                {/* Expand/focus button: toggle fullscreen view of boat structure */}
+                <button
+                    aria-pressed={expanded}
+                    onClick={() => { if (isSmall) setExpanded(v => !v) }}
+                    className={`
+                        fixed bottom-4 right-4 z-[1100] md:hidden inline-flex items-center justify-center w-12 h-12 
+                        rounded-full bg-white text-slate-800 shadow-lg border
+                    `}
+                    title={expanded ? 'Close full view' : 'Expand boat view'}
+                >
+                    <span className="sr-only">{expanded ? 'Close full view' : 'Expand boat view'}</span>
+                    {expanded ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L9 7.586V5a1 1 0 112 0v4a1 1 0 01-1 1H6a1 1 0 110-2h2.586L5.707 5.707a1 1 0 010-1.414zM15.707 15.707a1 1 0 01-1.414 0L11 12.414V15a1 1 0 11-2 0v-4a1 1 0 011-1h4a1 1 0 110 2h-2.586l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                        </svg>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 110 2H5v2a1 1 0 11-2 0V4zm14 0v3a1 1 0 11-2 0V5h-2a1 1 0 110-2h3a1 1 0 011 1zM3 16v-3a1 1 0 112 0v2h2a1 1 0 110 2H4a1 1 0 01-1-1zm14 0a1 1 0 00-1 1h-3a1 1 0 110-2h2v-2a1 1 0 112 0v3z" clipRule="evenodd" />
+                        </svg>
                     )}
-                </div>
-            </div>
-        </DragDropProvider>
+                </button>
+
+                {/* When expanded, the parent container above becomes fixed and the gauges are positioned to the page edges via conditional classes */}
+
+                {/* Floating Reserves button for small screens (fixed, bottom-right) */}
+                <button
+                    aria-expanded={reserveOpen}
+                    aria-controls="reserve-panel"
+                    onClick={() => { if (isSmall) setReserveOpen(true) }}
+                    className={`
+                        fixed bottom-4 left-4 ${(expanded && isSmall) ? 'z-[1115]' : 'z-50'} md:hidden inline-flex 
+                        items-center justify-center w-12 h-12 rounded-full bg-sky-600 text-white shadow-lg 
+                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-400
+                    `}
+                    title="Open reserves"
+                >
+                    <span className="sr-only">Open reserves</span>
+                    {/* simple icon: three stacked dots */}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                        <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </button>
+
+                <ReserveSlideOutPanel
+                    reserveOpen={reserveOpen}
+                    expanded={expanded}
+                    isSmall={isSmall}
+                    reserveRows={reserveRows}
+                    setReserveOpen={setReserveOpen}
+                />
+            </DragDropProvider>
+            <BoatStatisticsPanel
+                boatProps={state.boatProps}
+                sideBalance={state.sideBalance}
+                lineBalance={state.lineBalance}
+            />
+        </div>
     );
 }

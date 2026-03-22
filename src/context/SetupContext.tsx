@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
+import { BoatPosition } from "../enums/BoatConstant";
 import { calculateLineBalance, calculateSideBalance } from "../utils/WeightCalculator";
 // import Boat from "../refactor/boat/Boat";
 
@@ -34,17 +35,57 @@ export function SetupProvider({children}) {
         }
     }
 
-    const checkBoatBalance = (boardSetup: any, boatType: string) => {
+    const checkBoatBalance = useCallback((boardSetup: any, boatType: string) => {
         const settings = {
             ...state.settings,
             ...setWeightFactor(boatType)
         }
-        
-        const sideBalance = calculateSideBalance(boardSetup, settings)
-        const lineBalance = calculateLineBalance(boardSetup, settings)
 
-        return {sideBalance, lineBalance};
-    }
+        const boatProps = {
+            menCount: 0,
+            womenCount: 0,
+            totalPaddlers: 0,
+            totalPaddlersWeight: 0,
+            totalLoadWeight: 0,
+            averagePaddlerWeight: 0,
+            averageLoadPerPaddler: 0
+        };
+        
+        const sideBalance = calculateSideBalance(boardSetup, settings);
+        const lineBalance = calculateLineBalance(boardSetup, settings);
+
+        [...boardSetup[BoatPosition.LEFT], ...boardSetup[BoatPosition.RIGHT]].forEach((p: any) => {
+            if (!p) return;
+            if (p.gender === 'M') boatProps.menCount += 1;
+            if (p.gender === 'F') boatProps.womenCount += 1;
+
+            if (p.weight > 0) boatProps.totalPaddlers += 1;
+
+            boatProps.totalPaddlersWeight += parseInt(p.weight ?? 0);
+        });
+
+        boatProps.totalLoadWeight = boatProps.totalPaddlersWeight + 
+            (boardSetup[BoatPosition.DRUMMER][0]?.weight ?? 0) +
+            (boardSetup[BoatPosition.SWEEP][0]?.weight ?? 0);
+        
+        if (boatProps.totalPaddlers > 0) {
+            boatProps.averagePaddlerWeight = boatProps.totalPaddlersWeight / boatProps.totalPaddlers;
+            boatProps.averageLoadPerPaddler = boatProps.totalLoadWeight / boatProps.totalPaddlers;
+        }
+
+        setState((prev: any) => ({
+            ...prev,
+            sideBalance,
+            lineBalance,
+            boatProps: {
+                ...prev.boatProps,
+                ...boatProps
+            }
+        }));
+
+        // return value intentionally omitted — callers read results via context state
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state.settings]);
 
     const value: any = { state, setState, checkBoatBalance };
 

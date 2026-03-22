@@ -12,6 +12,7 @@ import { RequireAuth } from './context/AuthContext';
 import { RegattaProvider } from "./context/RegattaContext";
 import { SetupProvider } from "./context/SetupContext";
 import { ToastProvider } from './context/ToastContext';
+import AllRaceConfigs from "./pages/AllRaceConfigs";
 import ClubsPage from "./pages/ClubsPage";
 import LoginPage from "./pages/LoginPage";
 import SetupBoard from "./pages/SetupBoard";
@@ -49,12 +50,14 @@ function App() {
                         <Route path="boat" element={<RaceBoatSize/>}/>
                         <Route path="paddlers" element={<PaddlerListUpload/>}/>
                         <Route path="setupboard" element={<SetupBoard/>}/>
+                        <Route path="allconfigs" element={<AllRaceConfigs/>}/>
                         <Route path="clubs" element={<RequireAuth><ClubsPage/></RequireAuth>} />
                     </Route>
 
                     {/* Backwards-compatible entrypoint: /seat-plan */}
                     <Route path="/seat-plan" element={<RequireAuth><MainLayout/></RequireAuth>}>
                         <Route index element={<ClubsPage/>}/>
+                        <Route path="allconfigs" element={<AllRaceConfigs/>}/>
                         <Route path="manage" element={<Manage/>}/>
                         <Route path="category" element={<RaceAgeCategory/>}/>
                         <Route path="type" element={<RaceType/>}/>

@@ -52,7 +52,7 @@ export default function ClubsPage() {
 
   // number of local clubs/paddlers found (for modal message)
   const [migrationInfo, setMigrationInfo] = useState<{ clubs: number; paddlers: number }>({ clubs: 0, paddlers: 0 })
-  const {setClubId} = useRegattaState()
+  const {clubId, setClubId} = useRegattaState()
 
   // detect sign-in transition: if user just signed in and local clubs exist, prompt migration
   React.useEffect(() => {
@@ -341,36 +341,38 @@ export default function ClubsPage() {
           </div>
         </aside>
 
-        <section className="md:col-span-2 bg-white border rounded-lg p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <Tabs
-              items={[{ key: 'regatta', label: 'Regatta' }, { key: 'paddlers', label: 'Paddlers' }]}
-              activeKey={activeTab}
-              onChange={(k) => setActiveTab(k as 'regatta' | 'paddlers')}
-            />
-            <div className="text-sm text-gray-500">{activeTab === 'paddlers' && selectedClub ? `${selectedClub.paddlers.length} members` : ''}</div>
-          </div>
+        {clubId && (
+          <section className="md:col-span-2 bg-white border rounded-lg p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <Tabs
+                items={[{ key: 'regatta', label: 'Regatta' }, { key: 'paddlers', label: 'Paddlers' }]}
+                activeKey={activeTab}
+                onChange={(k) => setActiveTab(k as 'regatta' | 'paddlers')}
+              />
+              <div className="text-sm text-gray-500">{activeTab === 'paddlers' && selectedClub ? `${selectedClub.paddlers.length} members` : ''}</div>
+            </div>
 
-          {activeTab === 'regatta' ? (
-            <SetupHome clubId={selectedClubId} />
-          ) : (
-            <PaddlersPanel
-              selectedClub={selectedClub}
-              selectedPaddlers={selectedPaddlers}
-              onSelectionChange={(s) => setSelectedPaddlers(s)}
-              showAddPaddler={showAddPaddler}
-              onShowAddPaddler={(v) => setShowAddPaddler(v)}
-              onAddPaddler={addPaddler}
-              onSavePaddler={savePaddler}
-              onDeletePaddler={deletePaddler}
-              onExportJSON={exportJSON}
-              onExportCSV={exportCSV}
-              onImportFileChange={handleImportFile}
-              onDeleteClub={(id) => { setDeleteTarget(id); setShowConfirmDelete(true) }}
-              columns={columns}
-            />
-          )}
-        </section>
+            {activeTab === 'regatta' ? (
+              <SetupHome clubId={selectedClubId} />
+            ) : (
+              <PaddlersPanel
+                selectedClub={selectedClub}
+                selectedPaddlers={selectedPaddlers}
+                onSelectionChange={(s) => setSelectedPaddlers(s)}
+                showAddPaddler={showAddPaddler}
+                onShowAddPaddler={(v) => setShowAddPaddler(v)}
+                onAddPaddler={addPaddler}
+                onSavePaddler={savePaddler}
+                onDeletePaddler={deletePaddler}
+                onExportJSON={exportJSON}
+                onExportCSV={exportCSV}
+                onImportFileChange={handleImportFile}
+                onDeleteClub={(id) => { setDeleteTarget(id); setShowConfirmDelete(true) }}
+                columns={columns}
+              />
+            )}
+          </section>
+        )}
       </div>
 
       <ConfirmModal

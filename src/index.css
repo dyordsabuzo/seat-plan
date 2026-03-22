@@ -42,3 +42,37 @@ code {
   opacity: 1;
 }
 
+/* Export-to-PDF layout helper: when exporting, force race section to A4 landscape viewport
+   and tighten layout so all configs for a race fit on one page. Toggled by adding
+   `exporting-a4` to the document body during capture. */
+.exporting-a4 [data-export-race] {
+  width: 1122px; /* ~11.7in @96dpi */
+  height: 794px; /* ~8.27in @96dpi */
+  box-sizing: border-box;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: white;
+}
+
+.exporting-a4 [data-export-race] > .flex {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+.exporting-a4 .export-config {
+  padding: 6px !important;
+  box-shadow: none !important;
+  border-radius: 4px !important;
+  background: white !important;
+}
+
+.exporting-a4 .boat-visual {
+  transform: scale(0.85);
+  transform-origin: top left;
+}
+
+

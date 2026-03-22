@@ -11,7 +11,7 @@ import { useToast } from '../context/ToastContext';
 import { Regatta } from '../types/RegattaType';
 import * as RegattasStorage from '../utils/RegattasStorage';
 
-export default function SetupHome({clubId}:{clubId?:string}) {
+export default function SetupHome({clubId}:{clubId:string}) {
     const [allRegattas, setAllRegattas] = useState<Record<string, Regatta> | null>(null)
     const [selectedRegatta, setSelectedRegatta] = useState<string | null>(null);
     const {state: regatta, setState: setRegattaState} = useRegattaState()
@@ -78,10 +78,10 @@ export default function SetupHome({clubId}:{clubId?:string}) {
     // eslint-disable-next-line
     }, [clubId]);
 
-    useEffect(() => {
-        if (selectedRegatta) {
-            logger.debug("Selected regatta", selectedRegatta, "with configs", allRegattas?.[selectedRegatta]);
-            const picked = allRegattas?.[selectedRegatta] || { name: selectedRegatta, paddlers: [], configs: [] }
+    const setRegattaContext = (regattaName: string) => {
+        if (regattaName) {
+            logger.debug("Selected regatta", regattaName, "with configs", allRegattas?.[regattaName]);
+            const picked = allRegattas?.[regattaName] || { name: regattaName, paddlers: [], configs: [] }
             setRegattaState(picked);
 
             // Temporary: ensure selected regatta exists in Firestore for this club.
@@ -89,42 +89,109 @@ export default function SetupHome({clubId}:{clubId?:string}) {
             (async () => {
                 try {
                     if (!clubId) return logger.debug('[SetupHome] no clubId - skipping remote existence check')
-                    logger.debug('[SetupHome] checking Firestore for selected regatta', selectedRegatta)
+                    logger.debug('[SetupHome] checking Firestore for selected regatta', regattaName)
                     const remote = await RegattasStorage.loadRegattasForClub(clubId)
-                    if (!remote || !remote[selectedRegatta]) {
+                    if (!remote || !remote[regattaName]) {
                         if (!user || !user.uid) {
                             logger.debug('[SetupHome] user not signed in - skipping upsert of selected regatta to Firestore')
                             return
                         }
-                        logger.debug('[SetupHome] selected regatta missing remotely - upserting', selectedRegatta)
+                        logger.debug('[SetupHome] selected regatta missing remotely - upserting', regattaName)
                         try {
                             await RegattasStorage.upsertRegatta(user.uid, clubId, picked)
-                            logger.debug('[SetupHome] upserted selected regatta to Firestore', selectedRegatta)
-                            try { addToast(`Saved regatta "${selectedRegatta}" to cloud`, 'success') } catch (e) { /* noop */ }
+                            logger.debug('[SetupHome] upserted selected regatta to Firestore', regattaName)
+                            try { addToast(`Saved regatta "${regattaName}" to cloud`, 'success') } catch (e) { /* noop */ }
                         } catch (e) {
-                            logger.debug('[SetupHome] failed to upsert selected regatta to Firestore', selectedRegatta, e)
-                            try { addToast(`Failed to save regatta "${selectedRegatta}": ${String(e)}`, 'error') } catch (er) { /* noop */ }
+                            logger.debug('[SetupHome] failed to upsert selected regatta to Firestore', regattaName, e)
+                            try { addToast(`Failed to save regatta "${regattaName}": ${String(e)}`, 'error') } catch (er) { /* noop */ }
                         }
                     } else {
-                        logger.debug('[SetupHome] selected regatta already exists in Firestore', selectedRegatta)
+                        logger.debug('[SetupHome] selected regatta already exists in Firestore', regattaName)
                     }
                 } catch (e) {
                     logger.debug('[SetupHome] error ensuring selected regatta persisted', e)
                 }
             })()
         }
-        return () => {}
-    // eslint-disable-next-line         
-    }, [selectedRegatta]);
+    };
+
+    // useEffect(() => {
+    //     if (selectedRegatta) {
+    //         logger.debug("Selected regatta", selectedRegatta, "with configs", allRegattas?.[selectedRegatta]);
+    //         const picked = allRegattas?.[selectedRegatta] || { name: selectedRegatta, paddlers: [], configs: [] }
+    //         setRegattaState(picked);
+
+    //         // Temporary: ensure selected regatta exists in Firestore for this club.
+    //         // If it does not exist, upsert it. Only runs when a clubId is provided.
+    //         (async () => {
+    //             try {
+    //                 if (!clubId) return logger.debug('[SetupHome] no clubId - skipping remote existence check')
+    //                 logger.debug('[SetupHome] checking Firestore for selected regatta', selectedRegatta)
+    //                 const remote = await RegattasStorage.loadRegattasForClub(clubId)
+    //                 if (!remote || !remote[selectedRegatta]) {
+    //                     if (!user || !user.uid) {
+    //                         logger.debug('[SetupHome] user not signed in - skipping upsert of selected regatta to Firestore')
+    //                         return
+    //                     }
+    //                     logger.debug('[SetupHome] selected regatta missing remotely - upserting', selectedRegatta)
+    //                     try {
+    //                         await RegattasStorage.upsertRegatta(user.uid, clubId, picked)
+    //                         logger.debug('[SetupHome] upserted selected regatta to Firestore', selectedRegatta)
+    //                         try { addToast(`Saved regatta "${selectedRegatta}" to cloud`, 'success') } catch (e) { /* noop */ }
+    //                     } catch (e) {
+    //                         logger.debug('[SetupHome] failed to upsert selected regatta to Firestore', selectedRegatta, e)
+    //                         try { addToast(`Failed to save regatta "${selectedRegatta}": ${String(e)}`, 'error') } catch (er) { /* noop */ }
+    //                     }
+    //                 } else {
+    //                     logger.debug('[SetupHome] selected regatta already exists in Firestore', selectedRegatta)
+    //                 }
+    //             } catch (e) {
+    //                 logger.debug('[SetupHome] error ensuring selected regatta persisted', e)
+    //             }
+    //         })()
+    //     }
+    //     return () => {}
+    // // eslint-disable-next-line         
+    // }, [selectedRegatta]);
 
     const handleCreate = async (name: string) => {
-        setRegattaState({ name, paddlers: [], races: [] });
-        navigate('/paddlers');
+        const newRegatta: Regatta = { name, paddlers: [], races: [] }
+
+        // update local UI state immediately
+        setAllRegattas(prev => ({ ...(prev || {}), [name]: newRegatta }))
+        setRegattaState(newRegatta)
+
+        // persist immediately to backend when signed in, otherwise fallback to localStorage
+        try {
+            if (user && user.uid) {
+                await RegattasStorage.upsertRegatta(user.uid, clubId, newRegatta)
+                try { addToast(`Created regatta "${name}"`, 'success') } catch (e) { /* noop */ }
+            } else {
+                const raw = localStorage.getItem('regattaConfigs')
+                const existing = raw ? JSON.parse(raw) : {}
+                existing[name] = newRegatta
+                localStorage.setItem('regattaConfigs', JSON.stringify(existing))
+            }
+        } catch (e) {
+            logger.debug('Failed to persist created regatta to Firestore, falling back to localStorage', e)
+            try {
+                const raw = localStorage.getItem('regattaConfigs')
+                const existing = raw ? JSON.parse(raw) : {}
+                existing[name] = newRegatta
+                localStorage.setItem('regattaConfigs', JSON.stringify(existing))
+                try { addToast(`Saved regatta "${name}" locally (cloud save failed)`, 'error') } catch (er) { /* noop */ }
+            } catch (err) {
+                logger.debug('Local fallback persist failed for created regatta', err)
+            }
+        }
+
+        navigate('/paddlers')
     }
 
     // const [, setRegatta, regattaActions] = useRegattaState()
 
     const handleSelect = (value: string) => {
+        setRegattaContext(value);
         setSelectedRegatta(value);
     }
 
@@ -260,8 +327,7 @@ export default function SetupHome({clubId}:{clubId?:string}) {
                             label={`Saved configurations`}
                             items={Object.keys(allRegattas ?? {})}
                             setSelection={(v) => handleSelect(v)}
-                            selectedIndex={regatta ? Object.keys(allRegattas ?? {}).indexOf(regatta?.name ?? '') : -1}
-                            // selectedItem={regatta?.name ?? null}
+                            selectedIndex={regatta ? Object.keys(allRegattas ?? {}).indexOf(selectedRegatta ?? '') : -1}
                         />
                         {regatta && (
                             <div className={`flex flex-col justify-end gap-2 text-sm `}>
@@ -274,6 +340,7 @@ export default function SetupHome({clubId}:{clubId?:string}) {
                                 }} className={`px-2 py-1 bg-green-600 text-white rounded`}>Setup boat config</button>
                                 
                                 <button onClick={exportRegattaAsJson} className={`px-2 py-1 bg-blue-500 text-white rounded`}>Export configuration</button>
+                                <button onClick={() => navigate('/allconfigs')} className={`px-2 py-1 bg-blue-500 text-white rounded`}>View all configs</button>
                                 <button onClick={deleteRegatta} className={`px-2 py-1 bg-red-400 text-white rounded`}>Delete configuration</button>
                             </div>
                         )}

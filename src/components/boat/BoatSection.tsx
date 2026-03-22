@@ -11,9 +11,9 @@ export function SweepSection({items}) {
   return (
     <SortableColumn 
         id={"S"}
-        rows={[sweep]}>
-    </SortableColumn>
+        rows={[sweep]}/>
   )
+  
 }
 
 export function DrummerSection({items}) {
@@ -22,8 +22,7 @@ export function DrummerSection({items}) {
   return (
     <SortableColumn 
         id={"D"}
-        rows={[drummer]}>
-    </SortableColumn>
+        rows={[drummer]}/>
   )
 }
 
@@ -50,10 +49,11 @@ export function SortableColumn(
     id: string;
     type?: string;
     rows?: {id: string; name?: string}[]; 
-    children?: React.ReactNode;
+    // children?: React.ReactNode;
     hideXButton?: boolean;
     removeItem?: (columnId: string, itemId: string) => void;
   }) {
+
   const {isDropTarget, ref} = useDroppable({
     get id() {
       return props.id;
@@ -75,7 +75,7 @@ export function SortableColumn(
       ref={ref}
       className={`
         max-h-[25.25rem] 
-        min-h-[2.5rem] min-w-[9rem] flex flex-col gap-1 border border-1 p-1 px-2 
+        min-h-[2.5rem] min-w-[6rem] flex flex-col gap-1 border border-1 p-1 px-2 
         rounded overflow-hidden
         ${props.id.startsWith('RESERVE') ? 'overflow-y-auto' : ''}
         ${isDropTarget ? 'bg-gray-60' : 'bg-gray-60'}
@@ -87,7 +87,7 @@ export function SortableColumn(
         <h2 className={`text-xs font-semibold py-2`}>Reserves</h2>
       )}
     
-      {!props.children && (
+      {/* {!props.children && ( */}
           <div className='flex flex-col gap-2 bg-gray-100'>
               {props.rows.map((item, itemIndex) => (
                   <SortableItem 
@@ -99,10 +99,42 @@ export function SortableColumn(
                     removeItem={handleRemoveItem}/>
               ))}
           </div>
-      )}
-      {props.children}
+      {/* )} */}
+      {/* {props.children} */}
     </div>
   );
+}
+
+export function ReadOnlyColumn(
+  props: {
+    id: string;
+    rows?: {id: string; name?: string}[]; 
+  }
+) {
+  return (
+    <div
+      className={`
+        max-h-[25.25rem] 
+        min-h-[2.5rem] min-w-[6rem] flex flex-col gap-1 border border-1 p-1 px-2 
+        rounded overflow-hidden
+        ${props.id.startsWith('RESERVE') ? 'overflow-y-auto' : ''}
+      `}
+      data-shadow={'true'}
+    >
+      {props.id.startsWith('RESERVE') && (
+        <h2 className={`text-xs font-semibold py-2`}>Reserves</h2>
+      )}
+      <div className='flex flex-col gap-2 bg-gray-100'>
+        {props.rows?.map((item, itemIndex) => (
+          <div key={[props.id, item.id, itemIndex].join('-')} className={
+            `w-[6rem] h-[2rem] flex justify-between items-center text-xs p-1 px-2 rounded border bg-white`
+          }>
+            {item.name || ''}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export function SortableItem(props: {item: any; column?: string; index: number; hideXButton?: boolean; removeItem?: (itemId: string) => void}) {
@@ -125,13 +157,16 @@ export function SortableItem(props: {item: any; column?: string; index: number; 
     });
 
     const {state} = useBoardView();
+    if (!state) return null;
+
     const {settings} = state;  
 
     return (
         <div
           ref={ref}
           className={`
-            w-[7.8rem] h-[2rem] flex justify-between items-center text-xs p-1 px-2 rounded border
+            ${settings.showWeights ? 'w-[6.75rem]' : 'w-[5.5rem]'} 
+            h-[2rem] flex justify-between items-center text-xs p-1 px-2 rounded border
             ${props.item.gender === 'F' ? 'border-l-4 border-l-red-400 bg-white' : props.item.gender === 'M' ? 'border-l-4 border-l-blue-400 bg-white' : 'bg-orange-100'}
           `}
           data-shadow={isDragging ? 'true' : undefined}

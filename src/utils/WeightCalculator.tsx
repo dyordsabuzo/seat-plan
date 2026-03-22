@@ -99,7 +99,6 @@ export function calculateSideBalance(boat: any, settings: any = {}) {
 
     const leftPaddlers = boat[BoatPosition.LEFT]
     const rightPaddlers = boat[BoatPosition.RIGHT]
-
     const weightFactor = settings.sideWeightFactor ?? sideWeightFactor
 
 
@@ -117,7 +116,11 @@ export function calculateSideBalance(boat: any, settings: any = {}) {
         distribution: (value === 0 ? "Balanced" : (value > 0 ? "Right" : "Left") + " heavy"),
         value: value.toFixed(1),
         alert: Math.abs(value) > 5,
-        weightTolerance: `minimum -5kg, maximum 5kg`
+        weightTolerance: `minimum -5kg, maximum 5kg`,
+        totalPaddlersWeight: 0,
+        totalLoadWeight: 0,
+        averagePaddlerWeight: 0,
+        totalLoadPerPaddler: 0
     };
 }
 
@@ -156,7 +159,12 @@ export function calculateLineBalance(boat: any, settings: any = {}) {
         distribution: (value === 0 ? "Balanced" : (value > 0 ? "Front" : "Back") + " heavy"),
         value: value.toFixed(1),
         alert: value > 15 || value < -25,
-        weightTolerance: `minimum -25kg, maximum 15kg`
+        weightTolerance: `minimum -25kg, maximum 15kg`,
+        totalPaddlersWeight: 0,
+        totalLoadWeight: 0,
+        averagePaddlerWeight: 0,
+        totalLoadPerPaddler: 0
+
     };
 }
 

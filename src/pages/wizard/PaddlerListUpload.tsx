@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useRegattaState } from "../../context/RegattaContext";
 import { useSetupState } from "../../context/SetupContext";
 import { Regatta } from "../../types/RegattaType";
+import * as ClubsStorage from '../../utils/ClubsStorage';
 import ConfigHelper from '../../utils/ConfigHelper';
 import { processFile } from "../../utils/DataBuilder";
 import * as RegattasStorage from '../../utils/RegattasStorage';
@@ -22,7 +23,7 @@ type Paddler = {
 
 export default function PaddlerListUpload() {
     const { setting: state, setSetting: setState } = useSetupState()
-    const { state: regatta, setState: setRegatta } : {state: Regatta, setState: (next: Regatta|null) => void} = useRegattaState()
+    const { state: regatta, setState: setRegatta, clubId } : {state: Regatta, setState: (next: Regatta|null) => void, clubId?: string | null} = useRegattaState()
     
     const [mode] = useState<'upload'|'manual'>('upload')
     const [manualText, setManualText] = useState('')
@@ -37,6 +38,11 @@ export default function PaddlerListUpload() {
     const [modalGender, setModalGender] = useState('M')
     const [modalWeight, setModalWeight] = useState('')
     const [modalDob, setModalDob] = useState('')
+    const [clubModalOpen, setClubModalOpen] = useState(false)
+    const [clubPaddlers, setClubPaddlers] = useState<Paddler[]>([])
+    const [clubSelectedIds, setClubSelectedIds] = useState<string[]>([])
+    const [clubSearch, setClubSearch] = useState('')
+    const [clubLoading, setClubLoading] = useState(false)
     // DataTable will manage inline editing UI; page provides onSave/onDelete handlers
     
     const navigate = useNavigate()
@@ -66,6 +72,85 @@ export default function PaddlerListUpload() {
         const q = search.toLowerCase()
         return paddlersDisplayed.filter(p => `${p.name} ${p.id}`.toLowerCase().includes(q))
     }, [paddlersDisplayed, search])
+
+    const availableClubPaddlers = useMemo(() => {
+        const existingIds = new Set((paddlersDisplayed || []).map(p => String(p.id)))
+        return (clubPaddlers || []).filter(p => !existingIds.has(String(p.id)))
+    }, [clubPaddlers, paddlersDisplayed])
+
+    const filteredClubPaddlers = useMemo(() => {
+        if (!clubSearch) return availableClubPaddlers
+        const q = clubSearch.toLowerCase()
+        return availableClubPaddlers.filter(p => `${p.name} ${p.id}`.toLowerCase().includes(q))
+    }, [availableClubPaddlers, clubSearch])
+
+    const openClubPaddlersModal = async () => {
+        setError(null)
+        setSuccess(null)
+
+        logger.debug('Opening club paddlers modal', {user, clubId})
+        if (!user?.uid) {
+            setError('Please sign in to load club paddlers')
+            return
+        }
+        if (!clubId) {
+            setError('No club selected. Please select a club first.')
+            return
+        }
+
+        setClubLoading(true)
+        try {
+            const clubs = await ClubsStorage.loadClubs(user.uid)
+            const selectedClub = clubs.find(c => String(c.id) === String(clubId))
+            const list = (selectedClub?.paddlers || []).map((p: any) => ({
+                id: String(p.id),
+                name: p.name || '',
+                weight: p.weight,
+                gender: p.gender,
+                birthdate: p.birthdate || null
+            }))
+            setClubPaddlers(list)
+            setClubSelectedIds([])
+            setClubSearch('')
+            setClubModalOpen(true)
+        } catch (e) {
+            console.debug('Failed to load club paddlers', e)
+            setError('Failed to load club paddlers')
+        } finally {
+            setClubLoading(false)
+        }
+    }
+
+    const toggleClubPaddler = (id: string) => {
+        setClubSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+    }
+
+    const addSelectedClubPaddlers = () => {
+        const selected = clubPaddlers.filter(p => clubSelectedIds.includes(String(p.id)))
+        if (!selected.length) {
+            setError('Please select at least one paddler')
+            return
+        }
+
+        const existingMap = new Map<string, Paddler>(paddlersDisplayed.map(p => [String(p.id), p]))
+        selected.forEach(p => {
+            if (!existingMap.has(String(p.id))) {
+                existingMap.set(String(p.id), p)
+            }
+        })
+
+        const next = Array.from(existingMap.values())
+        setPaddlersDisplayed(next)
+        try {
+            setRegatta(prev => ({ ...(prev || {}), paddlers: next }))
+        } catch (e) {
+            console.debug('could not set regatta paddlers', e)
+        }
+
+        setClubModalOpen(false)
+        setSuccess(`${selected.length} paddler(s) added from club`)
+        setError(null)
+    }
 
     const handleFileChange = async (file: File | null) => {
         if (!file) return
@@ -235,20 +320,9 @@ export default function PaddlerListUpload() {
                         <Breadcrumb items={[{label: 'Home', to: '/'}]} title="Paddler List" backPath={'/'} />
                     </div>
                     <h1 className={`text-2xl font-semibold`}>Paddler list</h1>
-                    <p className={`text-sm text-gray-500`}>Upload a CSV or paste paddlers manually. Parsed paddlers appear below.</p>
+                    <p className={`text-sm text-gray-500`}>Set regatta paddlers.</p>
                 </div>
             </header>
-
-            <div>
-                <div className={`flex items-center space-x-3`}>
-                    <div className={`flex items-center gap-2`}>
-                        {/* <button onClick={() => setMode('upload')} className={`px-3 py-1 rounded ${mode==='upload' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>Upload file</button> */}
-                        {/* <button onClick={() => setMode('manual')} className={`px-3 py-1 rounded ${mode==='manual' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>Enter manually</button> */}
-                        
-                    </div>
-                    
-                </div>
-            </div>
 
             <div className={`mb-1`}> 
                 <div className={`flex justify-between gap-3`}> 
@@ -389,7 +463,10 @@ export default function PaddlerListUpload() {
                     </div>
                 </div>
             </div>
-            <button onClick={() => setAddOpen(true)} className={`px-3 py-1 bg-indigo-500 text-white rounded text-sm my-2`}>Add paddler</button>
+            <div className="flex items-center gap-2 my-2">
+                <button onClick={() => setAddOpen(true)} className={`px-3 py-1 bg-indigo-500 text-white rounded text-sm`}>Add paddler</button>
+                <button onClick={openClubPaddlersModal} disabled={clubLoading} className={`px-3 py-1 bg-sky-600 text-white rounded text-sm disabled:opacity-60`}>Club paddlers</button>
+            </div>
 
             <div className={`mt-4`}> 
                 <DataTable
@@ -445,6 +522,70 @@ export default function PaddlerListUpload() {
                                 setModalDob('')
                                 setError(null)
                             }} className={`px-3 py-1 bg-blue-500 text-white rounded`}>Add</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {clubModalOpen && (
+                <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40`}>
+                    <div className={`bg-white p-6 rounded shadow-lg w-full max-w-3xl max-h-[85vh] flex flex-col`}>
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className={`text-lg font-semibold`}>Club paddlers</h3>
+                            <button onClick={() => setClubModalOpen(false)} className="text-gray-500">✕</button>
+                        </div>
+
+                        <div className="flex items-center gap-2 mb-3">
+                            <input
+                                value={clubSearch}
+                                onChange={e => setClubSearch(e.target.value)}
+                                placeholder="Search club paddlers by name or id"
+                                className="border rounded px-2 py-1 text-sm w-full"
+                            />
+                            <button onClick={() => setClubSearch('')} className="px-3 py-1 bg-gray-100 rounded text-sm">Reset</button>
+                        </div>
+
+                        <div className="text-sm text-gray-600 mb-2">{clubSelectedIds.length} selected • {filteredClubPaddlers.length} shown • {availableClubPaddlers.length} available</div>
+
+                        <div className="border rounded overflow-auto flex-1">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th className="text-left px-3 py-2 w-10"></th>
+                                        <th className="text-left px-3 py-2">ID</th>
+                                        <th className="text-left px-3 py-2">Name</th>
+                                        <th className="text-left px-3 py-2">Weight</th>
+                                        <th className="text-left px-3 py-2">Gender</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredClubPaddlers.map((p) => (
+                                        <tr key={`club-p-${p.id}`} className="border-t hover:bg-gray-50">
+                                            <td className="px-3 py-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={clubSelectedIds.includes(String(p.id))}
+                                                    onChange={() => toggleClubPaddler(String(p.id))}
+                                                />
+                                            </td>
+                                            <td className="px-3 py-2">{p.id}</td>
+                                            <td className="px-3 py-2">{p.name}</td>
+                                            <td className="px-3 py-2">{p.weight ?? ''}</td>
+                                            <td className="px-3 py-2">{p.gender ?? ''}</td>
+                                        </tr>
+                                    ))}
+                                    {filteredClubPaddlers.length === 0 && (
+                                        <tr>
+                                            <td colSpan={5} className="px-3 py-6 text-center text-gray-500">No available paddlers found</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button onClick={() => setClubModalOpen(false)} className="px-3 py-1 bg-gray-100 rounded">Cancel</button>
+                            <button onClick={addSelectedClubPaddlers} className="px-3 py-1 bg-blue-600 text-white rounded">Add selected</button>
                         </div>
                     </div>
                 </div>

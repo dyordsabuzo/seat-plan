@@ -1,17 +1,15 @@
 import React, { useState } from 'react'
-import { Column } from '../components/basic/DataTable'
-import ConfirmModal from '../components/complex/modals/ConfirmModal'
-import Tabs from '../components/ui/Tabs'
 import { useAuth } from '../context/AuthContext'
 import { useOptions } from '../context/OptionsContext'
 import { useRegattaState } from '../context/RegattaContext'
 import { useToast } from '../context/ToastContext'
-import PaddlersPanel from '../features/clubs/PaddlersPanel'
+import { PaddlersPanel as ClubPaddlersPanel } from '../features/clubs'
 import useClubs, { Club } from '../hooks/useClubs'
+import { Column, ConfirmModal, Tabs } from '../shared'
 import { Paddler } from '../types/RegattaType'
 import * as ClubsStorage from '../utils/ClubsStorage'
 import { exportPaddlersCSV, exportPaddlersJSON, normalizePaddlers, parseCSVText } from '../utils/importExport'
-import SetupHome from './SetupHome'
+import RegattaSetupHome from './RegattaSetupHome'
 
 // type Club = {
 //   id: string
@@ -353,9 +351,9 @@ export default function ClubsPage() {
             </div>
 
             {activeTab === 'regatta' ? (
-              <SetupHome clubId={selectedClubId} />
+              <RegattaSetupHome clubId={selectedClubId} />
             ) : (
-              <PaddlersPanel
+              <ClubPaddlersPanel
                 selectedClub={selectedClub}
                 selectedPaddlers={selectedPaddlers}
                 onSelectionChange={(s) => setSelectedPaddlers(s)}

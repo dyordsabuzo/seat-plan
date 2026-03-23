@@ -9,7 +9,7 @@ import { getItems } from "../../utils/ConfigurationHelper";
 // import { setCurrentDragging } from "../complex/drag-and-drop/DragItemRegistry";
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { BoatStructure } from "../boat/BoatStructure";
+import { BoatStructure } from "../../features/boat";
 import { HeaderButtonsWidget } from "../complex/widgets/HeaderButtonsWidget";
 
 const initialiseBoard = (paddlers: any, boatType) => {

@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
-import { logger } from "../../common/helpers/logger";
-import Breadcrumb from "../../components/basic/Breadcrumb";
-import { useRegattaState } from "../../context/RegattaContext";
-// import Tabs from "../../refactor/Tabs";
 import { useNavigate } from "react-router-dom";
-import Container from '../../components/basic/Container';
-import RacesPanel from '../../components/complex/RacesPanel';
-import { Tabs } from '../../components/ui';
-import PaddlersPanel from '../../features/regatta/PaddlersPanel';
+import { logger } from "../../common/helpers/logger";
+import { useRegattaState } from "../../context/RegattaContext";
+import { PaddlersPanel, RacesPanel } from '../../features/regatta';
+import { ActionButton, Breadcrumb, Container, SummaryCard, Tabs } from '../../shared';
 
 const Manage: React.FC = () => {
     const {state: regatta} = useRegattaState();
@@ -42,25 +38,48 @@ const Manage: React.FC = () => {
     // }
 
     return (
-        <div className={`flex flex-col gap-4`}>
-            <Container className="py-6">
-                <header className={`flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6`}>
+        <Container className="py-6">
+            <div className="space-y-6">
+                <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <div className="mb-4 max-w-[900px]">
                             <Breadcrumb items={[{label: 'Home', to: '/'}]} title="Regatta management" backPath={'/'} />
                         </div>
-                        <h1 className={`text-2xl font-semibold`}>{regatta.name}</h1>
-                        <p className={`text-sm text-gray-500`}>Manage races and race allocations</p>
-                        {/* <p className={`text-sm text-gray-900 font-semibold py-2`}>{regatta.name}</p> */}
+                        <h1 className="text-2xl font-semibold">{regatta.name}</h1>
+                        <p className="text-sm text-gray-500">Manage races, paddler allocations, and move into boat setup when race data is ready.</p>
                     </div>
-                    <div className="">
-                        <button onClick={() => {
-                            navigate('/setupboard')
-                        }} className={`px-4 py-2 bg-green-500 text-white rounded`}>Go to boat setup</button>
+                    <div className="flex gap-2">
+                        <ActionButton
+                            onClick={() => {
+                                navigate('/setupboard')
+                            }}
+                            variant="success"
+                        >
+                            Go to boat setup
+                        </ActionButton>
+                        <ActionButton
+                            onClick={() => {
+                                navigate('/allconfigs')
+                            }}
+                            variant="primary"
+                        >
+                            View all configs
+                        </ActionButton>
                     </div>
                 </header>
-                <div>
-                    <div className="flex items-center justify-between mb-4">
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                    <SummaryCard label="Races" value={regatta.races?.length ?? 0} />
+                    <SummaryCard label="Paddlers" value={regatta.paddlers?.length ?? 0} />
+                    <SummaryCard
+                        label="Active view"
+                        value={activeTab === 'races' ? 'Race management' : 'Allocations'}
+                        valueClassName="text-sm font-medium text-slate-800"
+                    />
+                </div>
+
+                <section className="rounded-lg border bg-white p-4 shadow-sm">
+                    <div className="mb-4 flex items-center justify-between">
                         <Tabs
                             items={[{ key: 'races', label: 'Races' }, { key: 'allocations', label: 'Allocations' }]}
                             activeKey={activeTab}
@@ -75,10 +94,9 @@ const Manage: React.FC = () => {
                     <div id="tabpanel-allocations" role="tabpanel" aria-labelledby="tab-allocations" hidden={activeTab !== 'allocations'} className="my-6">
                         <PaddlersPanel />
                     </div>
-                </div>
-
-            </Container>
-        </div>
+                </section>
+            </div>
+        </Container>
     )
 }
 

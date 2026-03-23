@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react'
 import { logger } from '../common/helpers/logger'
-import Container from '../components/basic/Container'
-import { BoatStructure } from '../components/boat/BoatStructure'
-import ExportRacesModal from '../components/complex/modals/ExportRacesModal'
 import { BoardViewProvider } from '../context/BoardViewContext'
 import { useRegattaState } from '../context/RegattaContext'
 import { BoatSize } from '../enums/BoatConstant'
+import { BoatStructure } from '../features/boat'
+import { Container, ExportRacesModal } from '../shared'
 import { getItems } from '../utils/ConfigurationHelper'
 
 const initialiseBoard = (paddlers: any[], boatType: string) => {

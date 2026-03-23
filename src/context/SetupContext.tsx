@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useState } from "react";
 import { BoatPosition } from "../enums/BoatConstant";
 import { calculateLineBalance, calculateSideBalance } from "../utils/WeightCalculator";
-// import Boat from "../refactor/boat/Boat";
 
 export const SetupStateContext = createContext({})
 

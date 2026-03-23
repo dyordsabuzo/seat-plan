@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from "react";
 
-export const BoardViewContext = createContext({})
+export const BoardViewContext = createContext<any>(null)
 
 const setDefaultSettings = () => {
     return {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import Paddler from "../../../refactor/Paddler";
 import { PaddlerType } from "../../../types/PaddlerType";
 import { Droppable } from '../../DragDropWrappers';
+import SeatDropPaddler from "./SeatDropPaddler";
 
 type SeatDropType = {
     id: string,
@@ -34,7 +34,7 @@ const SeatDrop: React.FC<SeatDropType> = ({ id, paddler }) => {
                            ${snapshot.isDraggingOver ? "bg-slate-600" : "bg-amber-500"}
                         `}
                 >
-                    {paddler && <Paddler paddler={paddler} index={0} draggable={true} />}
+                    {paddler && <SeatDropPaddler paddler={paddler} index={0} draggable={true} />}
                     {provided.placeholder}
                 </div>
             )}

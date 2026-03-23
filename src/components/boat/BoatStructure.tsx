@@ -6,6 +6,7 @@ import { move } from "@dnd-kit/helpers";
 import { DragDropProvider } from "@dnd-kit/react";
 import { logger } from "../../common/helpers/logger";
 import { useSetupState } from "../../context/SetupContext";
+import { areItemsEqual, createItemsByPosition, getRowsByIds } from "../../features/boat/utils/boatStructure";
 import BoatLayoutPanel from "./BoatLayoutPanel";
 import BoatStatisticsPanel from "./BoatStatisticsPanel";
 import ReserveSlideOutPanel from "./ReserveSlideOutPanel";
@@ -16,28 +17,6 @@ export type Props = {
     boardSetup: any,
     viewOnly?: boolean;
     updateConfig?: (config: any) => void 
-};
-
-const createItemsByPosition = (setup: any) => ({
-    [BoatPosition.RESERVE]: setup?.[BoatPosition.RESERVE]?.map((item: any) => String(item.id)) || [],
-    [BoatPosition.DRUMMER]: setup?.[BoatPosition.DRUMMER]?.map((item: any) => String(item.id)) || [],
-    [BoatPosition.LEFT]: setup?.[BoatPosition.LEFT]?.map((item: any) => String(item.id)) || [],
-    [BoatPosition.RIGHT]: setup?.[BoatPosition.RIGHT]?.map((item: any) => String(item.id)) || [],
-    [BoatPosition.SWEEP]: setup?.[BoatPosition.SWEEP]?.map((item: any) => String(item.id)) || [],
-});
-
-const areItemsEqual = (a: any, b: any) => {
-    const positions = [BoatPosition.RESERVE, BoatPosition.DRUMMER, BoatPosition.LEFT, BoatPosition.RIGHT, BoatPosition.SWEEP];
-    return positions.every((position) => {
-        const left = a?.[position] || [];
-        const right = b?.[position] || [];
-
-        if (left.length !== right.length) return false;
-        for (let index = 0; index < left.length; index += 1) {
-            if (String(left[index]) !== String(right[index])) return false;
-        }
-        return true;
-    });
 };
 
 export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, updateConfig }: Props) => {
@@ -325,23 +304,23 @@ export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, up
     };
 
     const reserveRows = useMemo(
-        () => items[BoatPosition.RESERVE].map((id: any) => paddlersById.get(String(id)) || {id, name: "Empty Seat"} as any),
+        () => getRowsByIds(items[BoatPosition.RESERVE], paddlersById, (id) => ({ id, name: "Empty Seat" } as any)),
         [items, paddlersById]
     );
     const drummerRows = useMemo(
-        () => items[BoatPosition.DRUMMER].map((id: any, index: number) => paddlersById.get(String(id)) || {id: `${BoatPosition.DRUMMER}-${index}`, name: ""}),
+        () => getRowsByIds(items[BoatPosition.DRUMMER], paddlersById, (_id, index) => ({ id: `${BoatPosition.DRUMMER}-${index}`, name: "" })),
         [items, paddlersById]
     );
     const leftRows = useMemo(
-        () => items[BoatPosition.LEFT].map((id: any, index: number) => paddlersById.get(String(id)) || {id: `${BoatPosition.LEFT}-${index}`, name: ""}),
+        () => getRowsByIds(items[BoatPosition.LEFT], paddlersById, (_id, index) => ({ id: `${BoatPosition.LEFT}-${index}`, name: "" })),
         [items, paddlersById]
     );
     const rightRows = useMemo(
-        () => items[BoatPosition.RIGHT].map((id: any, index: number) => paddlersById.get(String(id)) || {id: `${BoatPosition.RIGHT}-${index}`, name: ""}),
+        () => getRowsByIds(items[BoatPosition.RIGHT], paddlersById, (_id, index) => ({ id: `${BoatPosition.RIGHT}-${index}`, name: "" })),
         [items, paddlersById]
     );
     const sweepRows = useMemo(
-        () => items[BoatPosition.SWEEP].map((id: any, index: number) => paddlersById.get(String(id)) || {id: `${BoatPosition.SWEEP}-${index}`, name: ""}),
+        () => getRowsByIds(items[BoatPosition.SWEEP], paddlersById, (_id, index) => ({ id: `${BoatPosition.SWEEP}-${index}`, name: "" })),
         [items, paddlersById]
     );
 

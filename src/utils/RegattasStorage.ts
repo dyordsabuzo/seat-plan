@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDocs, query, setDoc, where } from 'firebase/firestore'
 import { logger } from '../common/helpers/logger'
 import { db } from '../firebase'
 import { Regatta } from '../types/RegattaType'
@@ -126,5 +126,39 @@ export async function upsertRegatta(uid: string | null, clubId: string | undefin
   } catch (e2) {
     logger.error('[RegattasStorage] upsertRegatta error (top-level)', id, e2)
     throw e2
+  }
+}
+
+/**
+ * Delete a regatta from Firestore.
+ * Tries the nested club collection first when `clubId` is present, then also
+ * removes any top-level fallback document with the same id.
+ */
+export async function deleteRegatta(clubId: string | undefined, regattaName: string): Promise<void> {
+  if (!regattaName) throw new Error('regattaName is required to delete a regatta')
+
+  const id = sanitizeId(regattaName)
+  const errors: unknown[] = []
+
+  if (clubId) {
+    try {
+      await deleteDoc(doc(db, 'clubs', clubId, 'regattas', id))
+      logger.debug('[RegattasStorage] deleteRegatta done (nested)', id)
+    } catch (error) {
+      logger.error('[RegattasStorage] deleteRegatta error (nested attempt)', id, error)
+      errors.push(error)
+    }
+  }
+
+  try {
+    await deleteDoc(doc(db, 'regattas', id))
+    logger.debug('[RegattasStorage] deleteRegatta done (top-level)', id)
+  } catch (error) {
+    logger.error('[RegattasStorage] deleteRegatta error (top-level)', id, error)
+    errors.push(error)
+  }
+
+  if (errors.length > 1 || (!clubId && errors.length === 1)) {
+    throw errors[errors.length - 1]
   }
 }

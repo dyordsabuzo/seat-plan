@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { RegattaStateContext } from '../../../context/RegattaContext'
 import { SetupProvider } from '../../../context/SetupContext'
 import { BoatPosition, BoatSize } from '../../../enums/BoatConstant'
+import { BoatStructure } from '../../../features/boat'
 import { Race } from '../../../types/RegattaType'
-import { BoatStructure } from '../../boat/BoatStructure'
 
 type Props = {
   races: Race[],

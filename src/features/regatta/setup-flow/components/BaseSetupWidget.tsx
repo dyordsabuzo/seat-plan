@@ -2,12 +2,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { logger } from "../../../../common/helpers/logger";
-import { useAuth } from '../../../../context/AuthContext';
 import { useRegattaState } from "../../../../context/RegattaContext";
 import { useSetupState } from "../../../../context/SetupContext";
 import { SelectionButton } from "../../../../shared";
 import { Race } from "../../../../types/RegattaType";
-import * as RegattasStorage from '../../../../utils/RegattasStorage';
 
 type WidgetProps = {
     children?: React.ReactNode;
@@ -29,44 +27,36 @@ export default function BaseSetupWidget({
     lastPage = false,
 }: WidgetProps) {
     const { state } = useSetupState();
-    const { state: regatta } = useRegattaState();
+    const { state: regatta, setState: setRegatta, persistState } = useRegattaState();
 
     const [elements, setElements] = useState(defaults);
 
     const { handleSubmit, register, setValue } = useForm({ defaultValues: state, mode: "onSubmit" });
 
     const navigate = useNavigate();
-    const { user } = useAuth();
 
     const saveData = async (data: any) => {
         logger.debug("Saving data for field", fieldName, "with data", data);
 
         const fieldElements = data[fieldName].split(",");
 
-        switch (fieldName) {
-            case "categories":
-                regatta.categories = fieldElements;
-                break;
-            case "types":
-                regatta.types = fieldElements;
-                break;
-            case "distance":
-                regatta.distances = fieldElements;
-                break;
-            case "boatType":
-                regatta.boatTypes = fieldElements;
-                break;
+        const nextRegatta = {
+            ...regatta,
+            categories: fieldName === "categories" ? fieldElements : regatta.categories,
+            types: fieldName === "types" ? fieldElements : regatta.types,
+            distances: fieldName === "distance" ? fieldElements : regatta.distances,
+            boatTypes: fieldName === "boatType" ? fieldElements : regatta.boatTypes,
         }
 
-        logger.debug("Regatta state after saving", regatta, lastPage, navigateTo);
+        logger.debug("Regatta state after saving", nextRegatta, lastPage, navigateTo);
         if (lastPage) {
             const races: Race[] = [];
 
             let id = 1;
-            regatta.categories.forEach((category: string) => {
-                regatta.types.forEach((type: string) => {
-                    regatta.distances.forEach((distance: string) => {
-                        regatta.boatTypes.forEach((boatType: string) => {
+            nextRegatta.categories.forEach((category: string) => {
+                nextRegatta.types.forEach((type: string) => {
+                    nextRegatta.distances.forEach((distance: string) => {
+                        nextRegatta.boatTypes.forEach((boatType: string) => {
                             races.push({
                                 id: `${id++}`,
                                 category,
@@ -82,28 +72,16 @@ export default function BaseSetupWidget({
 
             logger.debug("Generated races", races);
 
-            regatta.races = races;
-
-            if (user && user.uid) {
-                try {
-                    await RegattasStorage.upsertRegatta(user.uid, undefined, regatta);
-                } catch (e) {
-                    console.debug('Failed to persist regatta to Firestore', e);
-                    const regattaConfigs = localStorage.getItem('regattaConfigs');
-                    localStorage.setItem('regattaConfigs', JSON.stringify({
-                        ...JSON.parse(regattaConfigs || '{}'),
-                        [regatta.name]: regatta
-                    }));
-                }
-            } else {
-                const regattaConfigs = localStorage.getItem('regattaConfigs');
-                localStorage.setItem('regattaConfigs', JSON.stringify({
-                    ...JSON.parse(regattaConfigs || '{}'),
-                    [regatta.name]: regatta
-                }));
+            const configuredRegatta = {
+                ...nextRegatta,
+                races,
             }
+            setRegatta(configuredRegatta)
+            await persistState(configuredRegatta)
 
-            logger.debug("Regatta state after config setup", regatta);
+            logger.debug("Regatta state after config setup", configuredRegatta);
+        } else {
+            setRegatta(nextRegatta)
         }
 
         navigate(navigateTo);

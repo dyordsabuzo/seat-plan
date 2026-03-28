@@ -7,7 +7,6 @@ import { PaddlersPanel as ClubPaddlersPanel } from '../features/clubs'
 import useClubs, { Club } from '../hooks/useClubs'
 import { Column, ConfirmModal, Tabs } from '../shared'
 import { Paddler } from '../types/RegattaType'
-import * as ClubsStorage from '../utils/ClubsStorage'
 import { exportPaddlersCSV, exportPaddlersJSON, normalizePaddlers, parseCSVText } from '../utils/importExport'
 import RegattaSetupHome from './RegattaSetupHome'
 
@@ -214,19 +213,6 @@ export default function ClubsPage() {
                 console.debug('[ClubsPage] upsertClub (hook) returned for', merged.id)
               } catch (e) {
                 console.debug('[ClubsPage] upsertClub (hook) error', e)
-              }
-
-              // Also attempt a direct storage write to ensure Firestore SDK is invoked
-              if (user && user.uid) {
-                try {
-                  console.debug('[ClubsPage] direct ClubsStorage.upsertClub', user.uid, merged.id)
-                  await ClubsStorage.upsertClub(user.uid, merged)
-                  console.debug('[ClubsPage] direct ClubsStorage.upsertClub done', user.uid, merged.id)
-                } catch (e) {
-                  console.debug('[ClubsPage] direct ClubsStorage.upsertClub error', e)
-                }
-              } else {
-                console.debug('[ClubsPage] cannot write to Firestore - no user')
               }
 
               addToast(`Imported ${normalized.length} paddler(s) successfully`, 'success')

@@ -1,6 +1,24 @@
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ActionLink, Container } from "../shared";
 
-const MainPage: React.FC = () => {
+export default function MainPage() {
+    const location = useLocation();
+    const navigate = useNavigate();
+    const incomingMessage = typeof (location.state as any)?.message === "string"
+        ? (location.state as any).message
+        : null;
+    const [visibleMessage, setVisibleMessage] = useState<string | null>(incomingMessage);
+
+    useEffect(() => {
+        setVisibleMessage(incomingMessage);
+    }, [incomingMessage]);
+
+    const dismissMessage = () => {
+        setVisibleMessage(null);
+        navigate(location.pathname, { replace: true, state: {} });
+    };
+
     return (
         <Container className="py-6">
             <div className="space-y-6">
@@ -10,6 +28,22 @@ const MainPage: React.FC = () => {
                         Use the clubs, regatta management, and boat setup flows to manage race planning.
                     </p>
                 </header>
+
+                {visibleMessage && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                            <span>{visibleMessage}</span>
+                            <button
+                                type="button"
+                                onClick={dismissMessage}
+                                className="rounded px-2 py-0.5 text-xs text-amber-800 hover:bg-amber-100"
+                                aria-label="Dismiss message"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                     <section className="md:col-span-2 rounded-lg border bg-white p-5 shadow-sm">
@@ -40,5 +74,3 @@ const MainPage: React.FC = () => {
         </Container>
     )
 }
-
-export default MainPage;

@@ -1,4 +1,16 @@
-# Getting Started with Create React App
+# Seat Plan
+
+## Data caching
+
+- TanStack Query is configured in `src/shared/query/AppQueryProvider.tsx`.
+- Query cache is persisted to `localStorage` under `seat-plan.query-cache`.
+- Clubs and regattas use query-backed hooks in `src/hooks/useClubs.ts` and `src/hooks/useRegattas.ts`.
+- Local persistence is centralized in `src/shared/query/clubsCache.ts` and `src/shared/query/regattasCache.ts`.
+- Firestore-facing query services are centralized in `src/shared/query/queries.ts`.
+- Local cache is updated optimistically first, then synced to Firestore when a user is authenticated.
+- Regatta autosave is centralized in `src/context/RegattaContext.tsx` with a short debounce to reduce backend writes.
+
+## Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

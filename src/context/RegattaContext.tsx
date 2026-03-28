@@ -1,83 +1,64 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 // import ConfigHelper from '../utils/ConfigHelper'
 // import {useSetupState} from './SetupContext'
 import { logger } from "../common/helpers/logger";
+import useRegattas from "../hooks/useRegattas";
 import { Race, Regatta } from "../types/RegattaType";
-import * as RegattasStorage from '../utils/RegattasStorage';
-import { useAuth } from './AuthContext';
 
 export const RegattaStateContext = createContext(null)
 
 export function RegattaProvider({children}) {
     const [state, setState] = useState<Regatta | null>(null)
     const [clubId, setClubId] = useState<string | null>(null)
-    const { user } = useAuth()
+    const lastSavedStateRef = useRef<string | null>(null)
+    const { upsertRegatta } = useRegattas(clubId)
 
     // const value: any = [state, setState, actions]
     useEffect(() => {
-        // eslint-disable-next-line
-        let mounted = true
-        const save = async () => {
-            try {
-                if (state && state.name) {
-                    logger.debug("Persisting regatta state", state);
-                    if (user && user.uid) {
-                        // persist to Firestore (top-level regattas when no club association)
-                        try {
-                            await RegattasStorage.upsertRegatta(user.uid, undefined, state)
-                            logger.debug('Regatta persisted to Firestore', state.name)
-                        } catch (e) {
-                            logger.debug('Failed to persist regatta to Firestore, falling back to localStorage', e)
-                            const raw = localStorage.getItem('regattaConfigs')
-                            const existing = raw ? JSON.parse(raw) : {}
-                            const merged = {...existing, [state.name]: state}
-                            localStorage.setItem('regattaConfigs', JSON.stringify(merged))
-                        }
-                    } else {
-                        // unauthenticated: persist locally
-                        const raw = localStorage.getItem('regattaConfigs')
-                        const existing = raw ? JSON.parse(raw) : {}
-                        const merged = {...existing, [state.name]: state}
-                        localStorage.setItem('regattaConfigs', JSON.stringify(merged))
-                    }
-                }
-            } catch (e) {
-                logger.debug('persist regatta failed', e)
+        if (!state?.name) return undefined
+
+        const serializedState = JSON.stringify(state)
+        if (lastSavedStateRef.current === serializedState) {
+            return undefined
+        }
+
+        const timeout = window.setTimeout(() => {
+            upsertRegatta(state)
+                .then(() => {
+                    lastSavedStateRef.current = serializedState
+                })
+                .catch(error => {
+                    logger.debug('persist regatta failed', error)
+                })
+        }, 400)
+
+        return () => window.clearTimeout(timeout)
+    }, [state, upsertRegatta]);
+
+    const persistState = useCallback(async (nextState = state) => {
+        if (!nextState?.name) return
+
+        return upsertRegatta(nextState)
+            .then(() => {
+                lastSavedStateRef.current = JSON.stringify(nextState)
+            })
+            .catch(error => {
+                logger.debug('persistState failed', error)
+            })
+    }, [state, upsertRegatta])
+
+    const updateRaceConfig = useCallback((race:Race) => {
+        setState(prev => {
+            if (!prev?.races) return prev
+            const nextRaces = prev.races.map(item => item.id === race.id ? race : item)
+            return {
+                ...prev,
+                races: nextRaces,
             }
-        }
-        save()
-        return () => { mounted = false }
-    }, [state, user]);
+        })
+    }, [])
 
-    const persistState = () => {
-        try {
-            if (state && state.name) {
-                logger.debug("Persisting regatta state (manual)", state);
-                if (user && user.uid) {
-                    RegattasStorage.upsertRegatta(user.uid, clubId, state).catch(e => {
-                        logger.debug('Manual persist to Firestore failed', e)
-                    })
-                } else {
-                    const raw = localStorage.getItem('regattaConfigs')
-                    const existing = raw ? JSON.parse(raw) : {}
-                    const merged = {...existing, [state.name]: state}
-                    localStorage.setItem('regattaConfigs', JSON.stringify(merged))
-                }
-            }
-        } catch (e) {
-            logger.debug('persistState failed', e)
-        }
-    }
-
-    const updateRaceConfig = (race:Race) => {
-        const raceToUpdate = state.races.findIndex(item => item.id === race.id);
-        if (raceToUpdate !== -1) {
-            state.races[raceToUpdate] = race;
-        }
-        persistState();
-    }
-
-    const value: any = {state, setState, clubId, setClubId, updateRaceConfig}
+    const value = useMemo(() => ({state, setState, clubId, setClubId, updateRaceConfig, persistState}), [state, clubId, persistState, updateRaceConfig])
 
     return (
         <RegattaStateContext.Provider value={value}>

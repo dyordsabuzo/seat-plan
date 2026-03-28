@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { OptionsProvider } from './context/OptionsContext';
 import './index.css';
 import reportWebVitals from './reportWebVitals';
+import { AppQueryProvider } from './shared/query';
 
 const root = ReactDOM.createRoot(
     document.getElementById('root') as HTMLElement
@@ -11,9 +12,11 @@ const root = ReactDOM.createRoot(
 root.render(
     // <React.StrictMode>
     <OptionsProvider>
-        <AuthProvider>
-            <App />
-        </AuthProvider>
+        <AppQueryProvider>
+            <AuthProvider>
+                <App />
+            </AuthProvider>
+        </AppQueryProvider>
     </OptionsProvider>
     // </React.StrictMode>
 );

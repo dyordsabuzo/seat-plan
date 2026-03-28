@@ -1,23 +1,112 @@
 import React from 'react';
 import { useBoardView } from '../../../context/BoardViewContext';
-import { HeaderButton } from "../../basic/buttons/HeaderButton";
 import ConfirmModal from '../modals/ConfirmModal';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Props = {
     names: string[]
-    clickedIndex: number
+    clickedIndex: number | null
     onClick: (index: number) => void
     exportPdf: () => void
     addHeaderHandler: () => void
     onDeleteConfig?: (index: number) => void
+    onReorderConfigs?: (fromIndex: number, toIndex: number) => void
 }
 
-export function HeaderButtonsWidget({names, clickedIndex = 0, onClick, exportPdf, addHeaderHandler, onDeleteConfig}: Props) {
+type ConfigTabProps = {
+    name: string
+    index: number
+    isActive: boolean
+    isDragOver: boolean
+    draggable: boolean
+    onSelect: () => void
+    onDelete: () => void
+    onDragStart: () => void
+    onDragOver: (e: React.DragEvent) => void
+    onDragLeave: () => void
+    onDrop: () => void
+    onDragEnd: () => void
+}
+
+// ─── ConfigTab sub-component ──────────────────────────────────────────────────
+
+function ConfigTab({
+    name, index, isActive, isDragOver, draggable,
+    onSelect, onDelete, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
+}: ConfigTabProps) {
+    return (
+        <div
+            role="tab"
+            aria-selected={isActive}
+            draggable={draggable}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            onDragEnd={onDragEnd}
+            className={[
+                'relative flex items-center gap-1 rounded-t-md px-3 py-1.5 text-xs font-medium',
+                'border border-b-0 transition-all duration-150 select-none outline-none',
+                isActive
+                    ? 'bg-white border-gray-300 text-gray-900 shadow-sm z-10 -mb-px'
+                    : 'bg-gray-100 border-transparent text-gray-500 hover:bg-gray-200 hover:text-gray-700',
+                isDragOver ? 'ring-2 ring-blue-400 ring-inset opacity-80' : '',
+                draggable ? 'cursor-grab active:cursor-grabbing' : '',
+            ].filter(Boolean).join(' ')}
+        >
+            <button
+                type="button"
+                onClick={onSelect}
+                className="leading-none focus:outline-none focus-visible:underline"
+            >
+                {name}
+            </button>
+
+            {isActive && (
+                <button
+                    type="button"
+                    title={`Delete ${name}`}
+                    aria-label={`Delete ${name}`}
+                    onClick={(e) => { e.stopPropagation(); onDelete() }}
+                    className={[
+                        'flex items-center justify-center w-3.5 h-3.5 rounded-full ml-0.5',
+                        'text-gray-400 hover:text-red-500 hover:bg-red-50',
+                        'transition-colors duration-100',
+                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400',
+                    ].join(' ')}
+                >
+                    {/* ✕ close icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" fill="currentColor" className="w-2 h-2" aria-hidden="true">
+                        <path d="M1.22 1.22a.75.75 0 0 1 1.06 0L5 3.94l2.72-2.72a.75.75 0 1 1 1.06 1.06L6.06 5l2.72 2.72a.75.75 0 1 1-1.06 1.06L5 6.06 2.28 8.78a.75.75 0 0 1-1.06-1.06L3.94 5 1.22 2.28a.75.75 0 0 1 0-1.06Z" />
+                    </svg>
+                </button>
+            )}
+        </div>
+    )
+}
+
+// ─── HeaderButtonsWidget ──────────────────────────────────────────────────────
+
+export function HeaderButtonsWidget({
+    names,
+    clickedIndex = null,
+    onClick,
+    exportPdf,
+    addHeaderHandler,
+    onDeleteConfig,
+    onReorderConfigs,
+}: Props) {
     const [confirmOpen, setConfirmOpen] = React.useState(false)
     const [pendingIndex, setPendingIndex] = React.useState<number | null>(null)
     const [pendingName, setPendingName] = React.useState<string | null>(null)
+    const dragFromRef = React.useRef<number | null>(null)
+    const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null)
 
-    const {state, setState} = useBoardView();
+    const { state, setState } = useBoardView()
+    const atMaxConfigs = names.length >= state.settings.maxConfig
+
+    // ── delete flow ────────────────────────────────────────────────────────────
 
     const requestDelete = (index: number) => {
         setPendingIndex(index)
@@ -28,7 +117,7 @@ export function HeaderButtonsWidget({names, clickedIndex = 0, onClick, exportPdf
     const handleConfirm = () => {
         if (pendingIndex === null) return
         try {
-            if (typeof onDeleteConfig === 'function') onDeleteConfig(pendingIndex)
+            onDeleteConfig?.(pendingIndex)
         } finally {
             setConfirmOpen(false)
             setPendingIndex(null)
@@ -42,91 +131,88 @@ export function HeaderButtonsWidget({names, clickedIndex = 0, onClick, exportPdf
         setPendingName(null)
     }
 
+    // ── drag handlers ──────────────────────────────────────────────────────────
+
+    const handleDrop = (toIndex: number) => {
+        if (dragFromRef.current !== null && dragFromRef.current !== toIndex) {
+            onReorderConfigs?.(dragFromRef.current, toIndex)
+        }
+        dragFromRef.current = null
+        setDragOverIndex(null)
+    }
+
+    // ── render ─────────────────────────────────────────────────────────────────
+
     return (
         <>
-            <div className={`flex flex-col sm:flex-row pt-4 pb-2 sm:pb-8 gap-2 sm:gap-12 items-start sm:items-center`}>
-                <div className="flex gap-2 border-b">
+            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 pt-4 pb-2 sm:pb-6">
+
+                {/* Tab strip */}
+                <div role="tablist" aria-label="Configurations" className="flex items-end gap-1 border-b border-gray-300">
                     {names.map((name, index) => (
-                        <HeaderButton
+                        <ConfigTab
                             key={index}
-                            label={name}
-                            isClicked={(index === clickedIndex)}
-                            onClick={() => onClick(index)}
-                            onContextMenu={(e: React.MouseEvent) => {
-                                e.preventDefault()
-                                requestDelete(index)
-                            }}
+                            name={name}
+                            index={index}
+                            isActive={index === clickedIndex}
+                            isDragOver={dragOverIndex === index}
+                            draggable={!!onReorderConfigs}
+                            onSelect={() => onClick(index)}
+                            onDelete={() => requestDelete(index)}
+                            onDragStart={() => { dragFromRef.current = index }}
+                            onDragOver={(e) => { e.preventDefault(); setDragOverIndex(index) }}
+                            onDragLeave={() => setDragOverIndex(null)}
+                            onDrop={() => handleDrop(index)}
+                            onDragEnd={() => { dragFromRef.current = null; setDragOverIndex(null) }}
                         />
                     ))}
-                    <label className="flex items-center gap-1 text-xs cursor-pointer px-3">
+
+                    {/* Add Config — lives at the end of the tab strip */}
+                    <button
+                        type="button"
+                        title={atMaxConfigs ? `Maximum of ${state.settings.maxConfig} configs reached` : 'Add a new configuration'}
+                        disabled={atMaxConfigs}
+                        onClick={addHeaderHandler}
+                        className={[
+                            'flex items-center gap-1 rounded-t-md px-2.5 py-1.5 text-xs font-medium',
+                            'border border-b-0 border-dashed border-gray-300 transition-all duration-150',
+                            atMaxConfigs
+                                ? 'cursor-not-allowed text-gray-300'
+                                : 'text-gray-400 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50',
+                        ].join(' ')}
+                    >
+                        {/* + icon */}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" fill="currentColor" className="w-2.5 h-2.5" aria-hidden="true">
+                            <path d="M5 1a.75.75 0 0 1 .75.75V4.25h2.5a.75.75 0 0 1 0 1.5h-2.5v2.5a.75.75 0 0 1-1.5 0v-2.5H1.75a.75.75 0 0 1 0-1.5h2.5V1.75A.75.75 0 0 1 5 1Z" />
+                        </svg>
+                        Add config
+                    </button>
+                </div>
+
+                {/* Right-side controls */}
+                <div className="flex items-center gap-4 pb-1">
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-gray-600">
                         <input
                             type="checkbox"
                             checked={state.settings.showWeights}
                             onChange={() =>
                                 setState({
                                     ...state,
-                                    settings: {
-                                        ...state.settings,
-                                        showWeights: !state.settings.showWeights,
-                                    },
+                                    settings: { ...state.settings, showWeights: !state.settings.showWeights },
                                 })
                             }
-                            className="accent-blue-600 h-4 w-4 rounded border border-blue-200 focus:ring-2 focus:ring-blue-400"
+                            className="h-3.5 w-3.5 rounded border-gray-300 accent-blue-600
+                                focus:ring-2 focus:ring-blue-400"
                         />
-                        <span className="select-none">Show weights</span>
+                        Show weights
                     </label>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <button className={`
-                                    rounded-md text-xs
-                                    px-2 py-1 text-center
-                                    text-blue-600
-                                    border border-blue-200
-                                    ${names.length >= state.settings.maxConfig ? "cursor-not-allowed" : ""}
-                                `}
-                        onClick={() => addHeaderHandler()}
-                        type={"button"}
-                        disabled={names.length >= state.settings.maxConfig}
-                    >
-                        +Add Config
-                    </button>
-
-                    <button
-                        className={`
-                            rounded-md text-xs 
-                            px-2 py-1 text-center text-red-600 
-                            border border-red-200
-                            ${names.length === 0 ? 'opacity-50 pointer-events-none' : ''}`}
-                        onClick={() => {
-                            if (clickedIndex !== null && clickedIndex >= 0 && clickedIndex < names.length) {
-                                requestDelete(clickedIndex)
-                            }
-                        }}
-                        type="button"
-                    >
-                        -Delete Config
-                    </button>
-
-                        {/* <button 
-                            className={`
-                                rounded-md text-xs 
-                                px-2 py-1 text-center text-red-600 
-                                border border-red-200
-                            `}
-                            onClick={() => exportPdf()}
-                            >
-                                Export PDF
-                    </button> */}
-
-                    
                 </div>
             </div>
 
             <ConfirmModal
                 open={confirmOpen}
                 title="Delete config"
-                message={pendingName ? `Delete config "${pendingName}"?` : 'Delete selected config?'}
+                message={pendingName ? `Delete "${pendingName}"?` : 'Delete selected config?'}
                 confirmLabel="Delete"
                 cancelLabel="Cancel"
                 onConfirm={handleConfirm}

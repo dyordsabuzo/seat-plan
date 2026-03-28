@@ -37,6 +37,7 @@ type Props<T> = {
 export default function DataTable<T extends Record<string, any>>({columns, data, rowKey, noEdit = false, onSave, onDelete, className = '', selectable = false, selected: selectedProp, onSelectionChange}: Props<T>) {
     const [editingId, setEditingId] = useState<any>(null)
     const [draft, setDraft] = useState<Partial<T> | null>(null)
+    const [isSaving, setIsSaving] = useState(false)
     const [sortBy, setSortBy] = useState<{key: string|null, direction: 'asc'|'desc'|null}>({key: null, direction: null})
     const [filters, setFilters] = useState<Record<string,string>>({})
     const tableWrapperRef = React.useRef<HTMLDivElement | null>(null)
@@ -82,11 +83,27 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
         setDraft(null)
     }
 
-    const save = () => {
+    const getDisplayValue = (col: Column<T>, value: unknown) => {
+        if (value === undefined || value === null || value === '') return ''
+        if (col.inputType === 'select' && col.options) {
+            const selectedOption = col.options.find(option => option.value === String(value))
+            return selectedOption?.label ?? String(value)
+        }
+        return String(value)
+    }
+
+    const save = async () => {
         if (!draft) return
-        if (onSave) onSave(draft as T)
-        setEditingId(null)
-        setDraft(null)
+        try {
+            setIsSaving(true)
+            if (onSave) {
+                await Promise.resolve(onSave(draft as T))
+            }
+            setEditingId(null)
+            setDraft(null)
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     const toggleSort = (key: string, sortable?: boolean) => {
@@ -236,6 +253,7 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
                                             return (
                                                 <td key={cIdx} className={`px-2 py-2 text-xs text-gray-700`} style={col.frozen ? { position: 'sticky', left: frozenLefts[cIdx] ?? 0, zIndex: 20, background: '#fff' } : {}}>
                                                     <select className={`border rounded p-1 text-xs w-full`} value={(draft as any)[field] ?? ''} onChange={e => setDraft({...draft, [field]: e.target.value})}>
+                                                        <option value="">Select...</option>
                                                         {col.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                                     </select>
                                                 </td>
@@ -252,14 +270,14 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
 
                                     // not editing or non-editable
                                     if (col.render) return <td key={cIdx} className={`px-4 py-2 text-xs text-gray-700`} style={col.frozen ? { position: 'sticky', left: frozenLefts[cIdx] ?? 0, zIndex: 20, background: '#fff' } : {}}>{col.render(row)}</td>
-                                    return <td key={cIdx} className={`px-4 py-2 text-xs text-gray-700`} style={col.frozen ? { position: 'sticky', left: frozenLefts[cIdx] ?? 0, zIndex: 20, background: '#fff' } : {}}>{value ?? ''}</td>
+                                    return <td key={cIdx} className={`px-4 py-2 text-xs text-gray-700`} style={col.frozen ? { position: 'sticky', left: frozenLefts[cIdx] ?? 0, zIndex: 20, background: '#fff' } : {}}>{getDisplayValue(col, value)}</td>
                                 })}
 
                                 <td className={`px-4 py-2 text-right`}>
                                     {isEditing ? (
                                         <div className={`flex gap-2 justify-end`}>
-                                            <button onClick={save} className={`px-2 py-1 text-xs bg-green-500 text-white rounded`}>Save</button>
-                                            <button onClick={cancelEdit} className={`px-2 py-1 text-xs bg-gray-200 rounded`}>Cancel</button>
+                                            <button onClick={save} disabled={isSaving} className={`px-2 py-1 text-xs bg-green-500 text-white rounded disabled:opacity-60 disabled:cursor-not-allowed`}>{isSaving ? 'Saving...' : 'Save'}</button>
+                                            <button onClick={cancelEdit} disabled={isSaving} className={`px-2 py-1 text-xs bg-gray-200 rounded disabled:opacity-60 disabled:cursor-not-allowed`}>Cancel</button>
                                         </div>
                                     ) : (
                                         <div className={`flex gap-2 justify-end`}>

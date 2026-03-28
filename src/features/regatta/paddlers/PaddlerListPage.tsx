@@ -4,21 +4,20 @@ import { logger } from "../../../common/helpers/logger";
 import Breadcrumb from "../../../components/basic/Breadcrumb";
 import Container from '../../../components/basic/Container';
 import DataTable, { Column } from '../../../components/basic/DataTable';
-import { useAuth } from "../../../context/AuthContext";
 import { useRegattaState } from "../../../context/RegattaContext";
 import { useSetupState } from "../../../context/SetupContext";
+import useClubs from '../../../hooks/useClubs';
 import { Regatta } from "../../../types/RegattaType";
-import * as ClubsStorage from '../../../utils/ClubsStorage';
 import ConfigHelper from '../../../utils/ConfigHelper';
 import { processFile } from "../../../utils/DataBuilder";
-import * as RegattasStorage from '../../../utils/RegattasStorage';
 import AddPaddlerModal from "./components/AddPaddlerModal";
 import ClubPaddlersModal from "./components/ClubPaddlersModal";
 import { Paddler } from "./types";
 
 export default function PaddlerListPage() {
   const { setting: state, setSetting: setState } = useSetupState();
-  const { state: regatta, setState: setRegatta, clubId }: { state: Regatta, setState: (next: Regatta | null) => void, clubId?: string | null } = useRegattaState();
+  const { state: regatta, setState: setRegatta, clubId, persistState }: { state: Regatta | null, setState: (next: Regatta | null) => void, clubId?: string | null, persistState: (nextState?: Regatta | null) => Promise<void> } = useRegattaState();
+  const { clubs } = useClubs();
 
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -33,23 +32,37 @@ export default function PaddlerListPage() {
   const [clubSelectedIds, setClubSelectedIds] = useState<string[]>([]);
   const [clubSearch, setClubSearch] = useState('');
   const [clubLoading, setClubLoading] = useState(false);
+  const hasNavigatedAwayRef = useRef(false);
 
   const navigate = useNavigate();
-  const { user } = useAuth();
+
+  const getRegattaPaddlers = (nextRegatta: Regatta | null | undefined): Paddler[] => {
+    if (!nextRegatta?.paddlers) return [];
+    if (Array.isArray(nextRegatta.paddlers)) return nextRegatta.paddlers;
+    if (typeof nextRegatta.paddlers === 'object') return Object.keys(nextRegatta.paddlers).map(k => nextRegatta.paddlers[k]);
+    return [];
+  };
 
   const [paddlersDisplayed, setPaddlersDisplayed] = useState<Paddler[]>(() => {
-    if (Array.isArray(regatta.paddlers)) return regatta.paddlers;
-    if (regatta.paddlers && typeof regatta.paddlers === 'object') return Object.keys(regatta.paddlers).map(k => regatta.paddlers[k]);
-    return [];
+    return getRegattaPaddlers(regatta);
   });
 
   useEffect(() => {
-    if (Array.isArray(regatta.paddlers)) {
-      setPaddlersDisplayed(regatta.paddlers);
-    } else if (regatta.paddlers && typeof regatta.paddlers === 'object') {
-      setPaddlersDisplayed(Object.keys(regatta.paddlers).map(k => regatta.paddlers[k]));
-    }
-  }, [regatta.paddlers]);
+    if (regatta?.name) return;
+    if (hasNavigatedAwayRef.current) return;
+
+    hasNavigatedAwayRef.current = true;
+    navigate('/', {
+      replace: true,
+      state: {
+        message: 'No active regatta was found. Please select or create one first.',
+      },
+    });
+  }, [navigate, regatta?.name]);
+
+  useEffect(() => {
+    setPaddlersDisplayed(getRegattaPaddlers(regatta));
+  }, [regatta]);
 
   const filtered = useMemo(() => {
     if (!search) return paddlersDisplayed;
@@ -72,11 +85,7 @@ export default function PaddlerListPage() {
     setError(null);
     setSuccess(null);
 
-    logger.debug('Opening club paddlers modal', { user, clubId });
-    if (!user?.uid) {
-      setError('Please sign in to load club paddlers');
-      return;
-    }
+    logger.debug('Opening club paddlers modal', { clubId });
     if (!clubId) {
       setError('No club selected. Please select a club first.');
       return;
@@ -84,7 +93,6 @@ export default function PaddlerListPage() {
 
     setClubLoading(true);
     try {
-      const clubs = await ClubsStorage.loadClubs(user.uid);
       const selectedClub = clubs.find(c => String(c.id) === String(clubId));
       const list = (selectedClub?.paddlers || []).map((p: any) => ({
         id: String(p.id),
@@ -267,26 +275,7 @@ export default function PaddlerListPage() {
   const handleNext = async () => {
     const toSaveTree: any = JSON.parse(JSON.stringify(regatta || {}));
 
-    try {
-      if (user && user.uid) {
-        try {
-          await RegattasStorage.upsertRegatta(user.uid, undefined, toSaveTree);
-        } catch (e) {
-          console.debug('Failed to persist to Firestore, falling back to localStorage', e);
-          const raw = localStorage.getItem('seatplan.races');
-          const existing = raw ? JSON.parse(raw) : {};
-          const merged = { ...existing, ...toSaveTree };
-          localStorage.setItem('seatplan.races', JSON.stringify(merged));
-        }
-      } else {
-        const raw = localStorage.getItem('seatplan.races');
-        const existing = raw ? JSON.parse(raw) : {};
-        const merged = { ...existing, ...toSaveTree };
-        localStorage.setItem('seatplan.races', JSON.stringify(merged));
-      }
-    } catch (e) {
-      console.debug('persist save failed', e);
-    }
+    await persistState(toSaveTree);
 
     navigate('/category', {
       state: {
@@ -295,6 +284,14 @@ export default function PaddlerListPage() {
       },
     });
   };
+
+  if (!regatta?.name) {
+    return (
+      <Container className="py-6">
+        <div className="text-sm text-gray-500">Redirecting to home…</div>
+      </Container>
+    );
+  }
 
   return (
     <Container className="py-6">

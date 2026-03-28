@@ -1,59 +1,22 @@
 // Renamed from SetupHome.tsx for clarity
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { logger } from '../common/helpers/logger';
-import { useAuth } from '../context/AuthContext';
 import { useRegattaState } from '../context/RegattaContext';
 import { useToast } from '../context/ToastContext';
+import useRegattas from '../hooks/useRegattas';
 import { ActionButton, ConfirmModal, Container, CreateRegattaModal, SelectableSidebarItem, SummaryCard } from '../shared';
 import { Regatta } from '../types/RegattaType';
-import * as RegattasStorage from '../utils/RegattasStorage';
 
 export default function RegattaSetupHome({clubId}:{clubId:string}) {
-    const [allRegattas, setAllRegattas] = useState<Record<string, Regatta> | null>(null)
     const [selectedRegatta, setSelectedRegatta] = useState<string | null>(null)
     const [createOpen, setCreateOpen] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const { state: regatta, setState: setRegattaState, setClubId } = useRegattaState()
-    const { user } = useAuth()
     const { addToast } = useToast()
     const navigate = useNavigate()
     const fileInputRef = useRef<HTMLInputElement | null>(null)
-
-    useEffect(() => {
-        if (!clubId) return
-        let mounted = true
-
-        const load = async () => {
-            logger.debug("Attempting to load regatta configs from localStorage and Firestore for club", clubId)
-            let local: Record<string, Regatta> = {}
-            try {
-                const raw = localStorage.getItem('regattaConfigs')
-                local = raw ? JSON.parse(raw) : {}
-            } catch (error) {
-                logger.debug('Failed to parse local regattaConfigs', error)
-            }
-
-            let remote: Record<string, Regatta> = {}
-            try {
-                remote = await RegattasStorage.loadRegattasForClub(clubId)
-            } catch (error) {
-                logger.debug('Failed to load regattas from Firestore', error)
-            }
-
-            const merged: Record<string, Regatta> = { ...local, ...remote }
-
-            if (mounted) {
-                setAllRegattas(merged)
-                if (regatta?.name && merged[regatta.name]) {
-                    setSelectedRegatta(regatta.name)
-                }
-            }
-        }
-
-        load()
-        return () => { mounted = false }
-    }, [clubId, regatta?.name])
+    const { regattas: allRegattas, upsertRegatta, deleteRegatta, isLoading } = useRegattas(clubId)
 
     const regattaNames = useMemo(() => Object.keys(allRegattas ?? {}), [allRegattas])
 
@@ -69,10 +32,6 @@ export default function RegattaSetupHome({clubId}:{clubId:string}) {
 
     const selectedIndex = activeRegatta ? regattaNames.indexOf(activeRegatta.name) : -1
 
-    const persistLocalRegattas = (nextRegattas: Record<string, Regatta>) => {
-        localStorage.setItem('regattaConfigs', JSON.stringify(nextRegattas))
-    }
-
     const syncContext = (nextRegatta: Regatta | null) => {
         setClubId(clubId || null)
         setRegattaState(nextRegatta)
@@ -87,18 +46,17 @@ export default function RegattaSetupHome({clubId}:{clubId:string}) {
 
     const handleCreate = async (name: string) => {
         const newRegatta: Regatta = { name, paddlers: [], races: [] }
-        const nextRegattas = { ...(allRegattas ?? {}), [name]: newRegatta }
-
-        setAllRegattas(nextRegattas)
         setSelectedRegatta(name)
         syncContext(newRegatta)
-        persistLocalRegattas(nextRegattas)
 
         try {
-            if (user?.uid) {
-                await RegattasStorage.upsertRegatta(user.uid, clubId, newRegatta)
-            }
-            addToast(`Created regatta "${name}"`, 'success')
+            const result = await upsertRegatta(newRegatta)
+            addToast(
+                result.persistedRemotely
+                    ? `Created regatta "${name}"`
+                    : `Saved regatta "${name}" locally`,
+                result.persistedRemotely ? 'success' : 'info'
+            )
         } catch (error) {
             logger.debug('Failed to persist created regatta to Firestore', error)
             addToast(`Saved regatta "${name}" locally`, 'info')
@@ -127,15 +85,9 @@ export default function RegattaSetupHome({clubId}:{clubId:string}) {
                 ...parsed,
             }
 
-            const nextRegattas = { ...(allRegattas ?? {}), [nextRegatta.name]: nextRegatta }
-            setAllRegattas(nextRegattas)
             setSelectedRegatta(nextRegatta.name)
             syncContext(nextRegatta)
-            persistLocalRegattas(nextRegattas)
-
-            if (user?.uid) {
-                await RegattasStorage.upsertRegatta(user.uid, clubId, nextRegatta)
-            }
+            await upsertRegatta(nextRegatta)
 
             addToast(`Imported regatta "${nextRegatta.name}"`, 'success')
         } catch (error) {
@@ -174,21 +126,18 @@ export default function RegattaSetupHome({clubId}:{clubId:string}) {
 
     const confirmDeleteRegatta = async () => {
         if (!activeRegatta) return
-
-        const nextRegattas = { ...(allRegattas ?? {}) }
-        delete nextRegattas[activeRegatta.name]
-
-        setAllRegattas(nextRegattas)
         setSelectedRegatta(null)
         syncContext(null)
-        persistLocalRegattas(nextRegattas)
         setShowDeleteConfirm(false)
 
         try {
-            if (user?.uid) {
-                await RegattasStorage.deleteRegatta(clubId, activeRegatta.name)
-            }
-            addToast(`Deleted regatta "${activeRegatta.name}"`, 'success')
+            const result = await deleteRegatta(activeRegatta.name)
+            addToast(
+                result.persistedRemotely
+                    ? `Deleted regatta "${activeRegatta.name}"`
+                    : `Deleted regatta "${activeRegatta.name}" locally`,
+                result.persistedRemotely ? 'success' : 'info'
+            )
         } catch (error) {
             logger.debug('Failed to delete regatta from Firestore', error)
             addToast(`Deleted regatta "${activeRegatta.name}" locally`, 'info')
@@ -237,6 +186,9 @@ export default function RegattaSetupHome({clubId}:{clubId:string}) {
 
                     <div className="mb-2 text-xs text-gray-500">Saved regattas</div>
                     <div className="max-h-[48vh] space-y-2 overflow-auto">
+                        {isLoading && regattaNames.length === 0 && (
+                            <div className="text-sm text-gray-500">Loading regattas…</div>
+                        )}
                         {regattaNames.length === 0 && (
                             <div className="text-sm text-gray-500">No regattas yet. Create one to get started.</div>
                         )}

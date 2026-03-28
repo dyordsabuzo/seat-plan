@@ -1,1 +1,1 @@
-export { default as RaceBoard } from "../../../components/board/RaceBoard";
+export { default as RaceBoard } from "../../../components/board/ConfigurationBoard";

@@ -32,7 +32,7 @@ type Props = {
     selectedRace?: string
 }
 
-export default function RaceBoard({race}: Props) {
+export default function ConfigurationBoard({race}: Props) {
     const boardRef = useRef<HTMLDivElement | null>(null)
     const [selectedConfigIndex, setSelectedConfigIndex] = useState<number | null>(null)
     const [configNames, setConfigNames] = useState<string[]>(race.configs.length < 2 ? ["Config 1"] : race.configs.map((_, index) => `Config ${index + 1}`))
@@ -140,6 +140,29 @@ export default function RaceBoard({race}: Props) {
                         ...configNames,
                         `Config ${configNames.length + 1}`
                     ])}
+                    onReorderConfigs={(fromIndex, toIndex) => {
+                        try {
+                            // Reorder configs array
+                            const newConfigs = [...race.configs]
+                            const [moved] = newConfigs.splice(fromIndex, 1)
+                            newConfigs.splice(toIndex, 0, moved)
+                            race.configs = newConfigs
+                            // Reorder config names
+                            const newNames = newConfigs.map((_, i) => `Config ${i + 1}`)
+                            setConfigNames(newNames)
+                            // Update selected index to follow the moved tab
+                            setSelectedConfigIndex(prev => {
+                                if (prev === null) return null
+                                if (prev === fromIndex) return toIndex
+                                if (prev > fromIndex && prev <= toIndex) return prev - 1
+                                if (prev < fromIndex && prev >= toIndex) return prev + 1
+                                return prev
+                            })
+                            updateRaceConfig(race)
+                        } catch (e) {
+                            console.debug('Failed to reorder configs', e)
+                        }
+                    }}
                     onDeleteConfig={(index) => {
                         // remove config at index and update state and regatta
                         try {

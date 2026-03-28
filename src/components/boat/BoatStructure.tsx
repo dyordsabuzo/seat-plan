@@ -142,7 +142,16 @@ export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, up
     const isSmall = useSmallScreen()
     const [expanded, setExpanded] = useState(false)
     const [reserveOpen, setReserveOpen] = useState(false)
+    const [isLocked, setIsLocked] = useState(viewOnly)
     const containerRef = useRef<HTMLDivElement | null>(null)
+
+    const isInteractionLocked = viewOnly || isLocked
+
+    useEffect(() => {
+        if (viewOnly) {
+            setIsLocked(true)
+        }
+    }, [viewOnly])
 
     // Close expanded view when rotating to desktop
     useEffect(() => { if (!isSmall) setExpanded(false) }, [isSmall])
@@ -152,27 +161,33 @@ export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, up
 
     // ── drag handlers ──────────────────────────────────────────────────────────
     const handleDragStart = useCallback(() => {
+        if (isInteractionLocked) return
         setBackup(structuredClone(items))
-    }, [items])
+    }, [isInteractionLocked, items])
 
     const handleDragOver = useCallback((event: any) => {
+        if (isInteractionLocked) return
         if (!event?.operation) return
         const { source, target } = event.operation
         if (source?.type === 'column') return
         if (String(source?.id) === String(target?.id)) return
         event.preventDefault?.()
         setItems((prev: any) => move(prev, event))
-    }, [])
+    }, [isInteractionLocked])
 
     const handleDragEnd = useCallback((event: any) => {
+        if (isInteractionLocked) return
         setItems((prev: any) => {
             const base = event.canceled ? (backup ?? prev) : prev
             return sanitise(base, backup ?? base)
         })
-    }, [backup])
+    }, [backup, isInteractionLocked])
 
     const handleRemoveItem = useCallback((columnId: string, itemId: string) => {
         setItems((prev: any) => {
+            if (isInteractionLocked) {
+                return prev
+            }
             const draft = { ...prev }
             switch (columnId) {
                 case "DRUMMER": draft[BoatPosition.DRUMMER] = [`${BoatPosition.DRUMMER}-0`]; break
@@ -183,12 +198,18 @@ export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, up
             if (!isNaN(Number(itemId))) draft[BoatPosition.RESERVE] = [...draft[BoatPosition.RESERVE], itemId]
             return sanitise(draft, backup ?? draft)
         })
-    }, [backup])
+    }, [backup, isInteractionLocked])
 
     // ── derived rows ───────────────────────────────────────────────────────────
     const reserveRows = useMemo(
         () => getRowsByIds(items[BoatPosition.RESERVE], paddlersById, (id) => ({ id, name: "Empty Seat" } as any)),
         [items, paddlersById],
+    )
+    const lockedReserveLabels = useMemo(
+        () => reserveRows
+            .map((row: any) => String(row?.name ?? row?.content ?? "").trim())
+            .filter((label) => label.length > 0 && label.toLowerCase() !== "empty seat"),
+        [reserveRows],
     )
     const drummerRows = useMemo(
         () => getRowsByIds(items[BoatPosition.DRUMMER], paddlersById, (_id, i) => ({ id: `${BoatPosition.DRUMMER}-${i}`, name: "" })),
@@ -212,9 +233,26 @@ export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, up
     // ── render ─────────────────────────────────────────────────────────────────
     return (
         <div className="w-full flex flex-col items-center sm:gap-4">
+            {!viewOnly && (
+                <div className="mb-2 flex w-full justify-end">
+                    <button
+                        type="button"
+                        onClick={() => setIsLocked((locked) => !locked)}
+                        aria-pressed={isInteractionLocked}
+                        className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium shadow-sm transition-colors ${
+                            isInteractionLocked
+                                ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                                : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                        }`}
+                    >
+                        {isInteractionLocked ? "Unlock setup" : "Lock setup"}
+                    </button>
+                </div>
+            )}
+
             <DragDropProvider
                 plugins={defaultPreset.plugins}
-                sensors={sensors}
+                sensors={isInteractionLocked ? [] : sensors}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
@@ -226,7 +264,7 @@ export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, up
                     isSmall={isSmall}
                     containerRef={containerRef}
                     race={race}
-                    viewOnly={viewOnly}
+                    viewOnly={isInteractionLocked}
                     reserveRows={reserveRows}
                     drummerRows={drummerRows}
                     leftRows={leftRows}
@@ -306,6 +344,30 @@ export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, up
                     />
                 )}
             </DragDropProvider>
+
+            {isSmall && isInteractionLocked && (
+                <div className="w-full rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                        <h3 className="text-sm font-semibold text-slate-800">Reserves</h3>
+                        <span className="text-xs text-slate-500">{lockedReserveLabels.length}</span>
+                    </div>
+
+                    {lockedReserveLabels.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                            {lockedReserveLabels.map((label, index) => (
+                                <span
+                                    key={`${label}-${index}`}
+                                    className="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700"
+                                >
+                                    {label}
+                                </span>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-slate-500">No reserve paddlers assigned.</p>
+                    )}
+                </div>
+            )}
 
             <BoatStatisticsPanel
                 boatProps={state.boatProps}

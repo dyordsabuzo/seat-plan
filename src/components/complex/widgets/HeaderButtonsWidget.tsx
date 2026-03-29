@@ -1,5 +1,6 @@
 import React from 'react';
 import { useBoardView } from '../../../context/BoardViewContext';
+import { getTabActionClassName, getTabButtonClassName, getTabListClassName } from '../../ui/Tabs';
 import ConfirmModal from '../modals/ConfirmModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -37,8 +38,6 @@ function ConfigTab({
 }: ConfigTabProps) {
     return (
         <div
-            role="tab"
-            aria-selected={isActive}
             draggable={draggable}
             onDragStart={onDragStart}
             onDragOver={onDragOver}
@@ -46,19 +45,25 @@ function ConfigTab({
             onDrop={onDrop}
             onDragEnd={onDragEnd}
             className={[
-                'relative flex items-center gap-1 rounded-t-md px-3 py-1.5 text-xs font-medium',
-                'border border-b-0 transition-all duration-150 select-none outline-none',
-                isActive
-                    ? 'bg-white border-gray-300 text-gray-900 shadow-sm z-10 -mb-px'
-                    : 'bg-gray-100 border-transparent text-gray-500 hover:bg-gray-200 hover:text-gray-700',
-                isDragOver ? 'ring-2 ring-blue-400 ring-inset opacity-80' : '',
+                'relative flex items-center gap-1 select-none',
+                isDragOver ? 'scale-[0.98] opacity-80' : '',
                 draggable ? 'cursor-grab active:cursor-grabbing' : '',
             ].filter(Boolean).join(' ')}
         >
             <button
                 type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`tabpanel-config-${index}`}
+                id={`tab-config-${index}`}
                 onClick={onSelect}
-                className="leading-none focus:outline-none focus-visible:underline"
+                className={getTabButtonClassName({
+                    active: isActive,
+                    className: [
+                        isActive ? 'pr-7 text-xs' : 'pr-2 text-xs',
+                        isDragOver ? 'ring-2 ring-sky-300 ring-inset' : '',
+                    ].filter(Boolean).join(' '),
+                })}
             >
                 {name}
             </button>
@@ -70,8 +75,8 @@ function ConfigTab({
                     aria-label={`Delete ${name}`}
                     onClick={(e) => { e.stopPropagation(); onDelete() }}
                     className={[
-                        'flex items-center justify-center w-3.5 h-3.5 rounded-full ml-0.5',
-                        'text-gray-400 hover:text-red-500 hover:bg-red-50',
+                        'absolute right-1 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full',
+                        'text-slate-400 hover:bg-red-50 hover:text-red-500',
                         'transition-colors duration-100',
                         'focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400',
                     ].join(' ')}
@@ -148,7 +153,7 @@ export function HeaderButtonsWidget({
             <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 pt-4 pb-2 sm:pb-6">
 
                 {/* Tab strip */}
-                <div role="tablist" aria-label="Configurations" className="flex items-end gap-1 border-b border-gray-300">
+                <div role="tablist" aria-label="Configurations" className={getTabListClassName('flex-wrap')}>
                     {names.map((name, index) => (
                         <ConfigTab
                             key={index}
@@ -174,11 +179,10 @@ export function HeaderButtonsWidget({
                         disabled={atMaxConfigs}
                         onClick={addHeaderHandler}
                         className={[
-                            'flex items-center gap-1 rounded-t-md px-2.5 py-1.5 text-xs font-medium',
-                            'border border-b-0 border-dashed border-gray-300 transition-all duration-150',
+                            getTabActionClassName('text-xs'),
                             atMaxConfigs
-                                ? 'cursor-not-allowed text-gray-300'
-                                : 'text-gray-400 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50',
+                                ? 'cursor-not-allowed border-slate-200 text-slate-300 hover:border-slate-200 hover:bg-transparent hover:text-slate-300'
+                                : '',
                         ].join(' ')}
                     >
                         {/* + icon */}

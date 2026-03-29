@@ -25,6 +25,9 @@ type Props<T> = {
     data: T[]
     rowKey: keyof T | string,
     noEdit?: boolean,
+    noDelete?: boolean,
+    stickyHeader?: boolean,
+    maxHeight?: string,
     onSave?: (row: T) => void
     onDelete?: (rowKey: any) => void
     className?: string
@@ -34,7 +37,7 @@ type Props<T> = {
     onSelectionChange?: (selected: any[]) => void
 }
 
-export default function DataTable<T extends Record<string, any>>({columns, data, rowKey, noEdit = false, onSave, onDelete, className = '', selectable = false, selected: selectedProp, onSelectionChange}: Props<T>) {
+export default function DataTable<T extends Record<string, any>>({columns, data, rowKey, noEdit = false, noDelete = false, stickyHeader = false, maxHeight = '', onSave, onDelete, className = '', selectable = false, selected: selectedProp, onSelectionChange}: Props<T>) {
     const [editingId, setEditingId] = useState<any>(null)
     const [draft, setDraft] = useState<Partial<T> | null>(null)
     const [isSaving, setIsSaving] = useState(false)
@@ -157,9 +160,9 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
     }, [data, filters, sortBy])
 
     return (
-        <div ref={tableWrapperRef} className={`overflow-auto border rounded-lg ${className}`}>
+        <div ref={tableWrapperRef} className={`overflow-auto border rounded-lg ${maxHeight} ${className}`}>
             <table className={`min-w-full divide-y divide-gray-200`}> 
-                <thead className={`bg-gray-50`}>
+                <thead className={`bg-gray-50 ${stickyHeader ? 'sticky top-0 z-40' : ''}`}>
                     <tr>
                         {/* selection header cell */}
                         {selectable ? (
@@ -182,7 +185,7 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
                         {columns.map((col, idx) => (
                             <th key={idx}
                                 className={`px-4 py-2 text-left text-xs font-medium text-gray-500 ${col.sortable ? 'cursor-pointer select-none' : ''}`}
-                                style={Object.assign({}, {width: col.width}, col.frozen ? { position: 'sticky' as const, left: frozenLefts[idx] ?? 0, zIndex: 30, background: '#fff' } : {})}
+                                style={Object.assign({}, {width: col.width}, col.frozen ? { position: 'sticky' as const, left: frozenLefts[idx] ?? 0, zIndex: stickyHeader ? 50 : 30, background: '#f9fafb' } : {})}
                                 onClick={() => toggleSort(String(col.key), col.sortable)}>
                                 <div className={`flex items-center gap-2`}>{(col.showOnEditOnly && !editingId) || (col.hideOnEdit && editingId) ? '' : col.title}
                                     {sortBy.key === String(col.key) && sortBy.direction === 'asc' && <span>▲</span>}
@@ -199,7 +202,7 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
                         {columns.map((col, idx) => (
                             <th key={idx}
                                 className={`px-2 py-1 text-left text-xs font-medium text-gray-500`}
-                                style={col.frozen ? { position: 'sticky', left: frozenLefts[idx] ?? 0, zIndex: 25, background: '#fff' } : {}}
+                                style={col.frozen ? { position: 'sticky', left: frozenLefts[idx] ?? 0, zIndex: stickyHeader ? 45 : 25, background: '#f9fafb' } : {}}
                             > 
                                 {((!col.showOnEditOnly || editingId) && !(col.hideOnEdit && editingId) && col.filterable) ? (
                                     col.inputType === 'select' && col.options ? (
@@ -282,7 +285,7 @@ export default function DataTable<T extends Record<string, any>>({columns, data,
                                     ) : (
                                         <div className={`flex gap-2 justify-end`}>
                                             {!noEdit && <button onClick={() => startEdit(row)} className={`px-2 py-1 text-xs bg-blue-500 text-white rounded`}>Edit</button>}
-                                            <button onClick={() => onDelete && onDelete(key)} className={`px-2 py-1 text-xs bg-red-500 text-white rounded`}>Delete</button>
+                                            {!noDelete && <button onClick={() => onDelete && onDelete(key)} className={`px-2 py-1 text-xs bg-red-500 text-white rounded`}>Delete</button>}
                                         </div>
                                     )}
                                 </td>

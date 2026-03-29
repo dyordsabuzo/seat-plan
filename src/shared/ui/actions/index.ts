@@ -1,1 +1,1 @@
-export { ActionButton, ActionLink, getActionButtonClassName } from "./ActionButton";
+export { ActionButton, ActionLink, clubPaddlersButtonClassName, getActionButtonClassName } from "./ActionButton";

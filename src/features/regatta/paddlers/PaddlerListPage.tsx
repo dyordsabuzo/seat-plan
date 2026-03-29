@@ -7,6 +7,7 @@ import DataTable, { Column } from '../../../components/basic/DataTable';
 import { useRegattaState } from "../../../context/RegattaContext";
 import { useSetupState } from "../../../context/SetupContext";
 import useClubs from '../../../hooks/useClubs';
+import { clubPaddlersButtonClassName } from '../../../shared/ui/actions';
 import { Regatta } from "../../../types/RegattaType";
 import ConfigHelper from '../../../utils/ConfigHelper';
 import { processFile } from "../../../utils/DataBuilder";
@@ -339,9 +340,9 @@ export default function PaddlerListPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 my-2">
+      <div className="my-2 flex items-center gap-2">
         <button onClick={() => setAddOpen(true)} className="px-3 py-1 bg-indigo-500 text-white rounded text-sm">Add paddler</button>
-        <button onClick={openClubPaddlersModal} disabled={clubLoading} className="px-3 py-1 bg-sky-600 text-white rounded text-sm disabled:opacity-60">Club paddlers</button>
+        <button onClick={openClubPaddlersModal} disabled={clubLoading} className={clubPaddlersButtonClassName}>Club paddlers</button>
       </div>
 
       <div className="mt-4">

@@ -5,7 +5,11 @@ import { Race } from '../../types/RegattaType'
 import DataTable, { Column } from '../basic/DataTable'
 import AddRaceForm from './forms/AddRaceForm'
 
-const RacesPanel: React.FC = () => {
+type Props = {
+    locked?: boolean
+}
+
+const RacesPanel: React.FC<Props> = ({ locked = false }) => {
     const { state: regatta, setState: setRegatta } = useRegattaState()
     const [showAddRace, setShowAddRace] = useState(false)
     const { addOption } = useOptions()
@@ -13,11 +17,13 @@ const RacesPanel: React.FC = () => {
     const races: Race[] = regatta?.races || []
 
     const handleSaveRace = (row: Race) => {
+        if (locked) return
         const next = races.map(r => r.id === row.id ? {...r, ...row} : r)
         setRegatta(prev => ({...prev, races: next}))
     }
 
     const deleteRace = (id: string) => {
+        if (locked) return
         const remaining = races.filter(r => r.id !== id)
         setRegatta(prev => ({...prev, races: remaining}))
     }
@@ -31,10 +37,16 @@ const RacesPanel: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                     {!showAddRace && (
-                        <button onClick={() => setShowAddRace(true)} className={`px-2 py-1 bg-blue-500 text-white rounded`}>Add race</button>
+                        <button
+                            onClick={() => setShowAddRace(true)}
+                            disabled={locked}
+                            className={`px-2 py-1 bg-blue-500 text-white rounded disabled:cursor-not-allowed disabled:opacity-60`}
+                        >
+                            Add race
+                        </button>
                     )}
 
-                    {showAddRace && (
+                    {showAddRace && !locked && (
                         <AddRaceForm
                             onCancel={() => setShowAddRace(false)}
                             onSave={(vals) => {
@@ -91,6 +103,8 @@ const RacesPanel: React.FC = () => {
                 ] as Column<Race>[]}
                 onSave={handleSaveRace}
                 onDelete={deleteRace}
+                noEdit={locked}
+                noDelete={locked}
             />
         </div>
     )

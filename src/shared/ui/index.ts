@@ -8,4 +8,5 @@ export type { TabItem } from "../../components/ui/Tabs";
 export { ActionButton, ActionLink, getActionButtonClassName } from "./actions";
 export { SummaryCard } from "./cards";
 export { SelectableSidebarItem } from "./lists";
+export { LockStatusBadge, LockToggleCard } from "./lock";
 

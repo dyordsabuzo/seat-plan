@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { logger } from "../../common/helpers/logger";
 import { useRegattaState } from "../../context/RegattaContext";
 import { PaddlersPanel, RacesPanel } from '../../features/regatta';
-import { ActionButton, Breadcrumb, Container, SummaryCard, Tabs } from '../../shared';
+import { usePersistentLock } from "../../hooks/usePersistentLock";
+import { ActionButton, Breadcrumb, Container, LockStatusBadge, LockToggleCard, SummaryCard, Tabs } from '../../shared';
 
 const Manage: React.FC = () => {
     const {state: regatta} = useRegattaState();
     const [activeTab, setActiveTab] = useState<'races' | 'allocations'>('races')
+    const { locked, toggleLocked } = usePersistentLock('regatta-management-lock', false)
 
     const navigate = useNavigate()
 
@@ -45,7 +47,10 @@ const Manage: React.FC = () => {
                         <div className="mb-4 max-w-[900px]">
                             <Breadcrumb items={[{label: 'Home', to: '/'}]} title="Regatta management" backPath={'/'} />
                         </div>
-                        <h1 className="text-2xl font-semibold">{regatta.name}</h1>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-2xl font-semibold">{regatta.name}</h1>
+                            <LockStatusBadge locked={locked} />
+                        </div>
                         <p className="text-sm text-gray-500">Manage races, paddler allocations, and move into boat setup when race data is ready.</p>
                     </div>
                     <div className="flex gap-2">
@@ -73,26 +78,34 @@ const Manage: React.FC = () => {
                     <SummaryCard label="Paddlers" value={regatta.paddlers?.length ?? 0} />
                     <SummaryCard
                         label="Active view"
-                        value={activeTab === 'races' ? 'Race management' : 'Allocations'}
+                        value={locked ? 'Locked' : activeTab === 'races' ? 'Race management' : 'Allocations'}
                         valueClassName="text-sm font-medium text-slate-800"
                     />
                 </div>
 
+                <LockToggleCard
+                    locked={locked}
+                    onToggle={toggleLocked}
+                    title="Regatta management lock"
+                    lockedDescription="Race and paddler changes are disabled. Unlock to edit."
+                    unlockedDescription="Race and paddler changes are enabled. Lock to prevent accidental edits."
+                />
+
                 <section className="rounded-lg border bg-white p-4 shadow-sm">
                     <div className="mb-4 flex items-center justify-between">
                         <Tabs
-                            items={[{ key: 'races', label: 'Races' }, { key: 'allocations', label: 'Allocations' }]}
+                            items={[{ key: 'races', label: 'Races' }, { key: 'allocations', label: 'Paddlers & allocations' }]}
                             activeKey={activeTab}
                             onChange={(k) => setActiveTab(k as 'races' | 'allocations')}
                         />
                     </div>
 
                     <div id="tabpanel-races" role="tabpanel" aria-labelledby="tab-races" hidden={activeTab !== 'races'}>
-                        <RacesPanel />
+                        <RacesPanel locked={locked} />
                     </div>
 
                     <div id="tabpanel-allocations" role="tabpanel" aria-labelledby="tab-allocations" hidden={activeTab !== 'allocations'} className="my-6">
-                        <PaddlersPanel />
+                        <PaddlersPanel locked={locked} />
                     </div>
                 </section>
             </div>

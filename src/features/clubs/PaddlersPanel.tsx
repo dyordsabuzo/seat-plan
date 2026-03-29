@@ -2,9 +2,11 @@ import React, { useEffect, useRef, useState } from 'react'
 import DataTable, { Column } from '../../components/basic/DataTable'
 import AddPaddlerForm from '../../components/complex/forms/AddPaddlerForm'
 import { Club } from '../../hooks/useClubs'
+import { LockStatusBadge } from '../../shared'
 import { Paddler } from '../../types/RegattaType'
 
 type Props = {
+  locked?: boolean
   selectedClub: Club | null
   selectedPaddlers: string[]
   onSelectionChange: (s: string[]) => void
@@ -21,6 +23,7 @@ type Props = {
 }
 
 export default function PaddlersPanel({
+  locked = false,
   selectedClub,
   selectedPaddlers,
   onSelectionChange,
@@ -42,26 +45,30 @@ export default function PaddlersPanel({
   return (
     <>
       <div className="flex flex-col items-start justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold">{selectedClub.name}</h3>
+        <div className="mb-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">{selectedClub.name}</h3>
+            <LockStatusBadge locked={locked} />
+          </div>
           <div className="text-sm text-gray-500">{selectedClub.paddlers.length} members</div>
         </div>
 
         {/* Full controls on md+ */}
         <div className="hidden md:flex items-center gap-2 text-xs">
-          <button onClick={() => onShowAddPaddler(true)} className="px-3 py-2 bg-blue-600 text-white rounded">Add member</button>
-          <button onClick={onExportJSON} className="px-3 py-2 bg-sky-500 text-white rounded">Export JSON</button>
-          <button onClick={onExportCSV} className="px-3 py-2 bg-sky-500 text-white rounded">Export CSV</button>
-          <label className="inline-flex items-center px-3 py-2 bg-gray-100 rounded cursor-pointer">
+          <button onClick={() => !locked && onShowAddPaddler(true)} disabled={locked} className="px-3 py-2 bg-blue-600 text-white rounded disabled:cursor-not-allowed disabled:opacity-60">Add member</button>
+          <button onClick={() => !locked && onExportJSON()} disabled={locked} className="px-3 py-2 bg-sky-500 text-white rounded disabled:cursor-not-allowed disabled:opacity-60">Export JSON</button>
+          <button onClick={() => !locked && onExportCSV()} disabled={locked} className="px-3 py-2 bg-sky-500 text-white rounded disabled:cursor-not-allowed disabled:opacity-60">Export CSV</button>
+          <label className={`inline-flex items-center px-3 py-2 bg-gray-100 rounded ${locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
             <span>Import</span>
-            <input type="file" accept=".json,.csv,application/json,text/csv" className="sr-only" onChange={onImportFileChange} />
+            <input type="file" accept=".json,.csv,application/json,text/csv" className="sr-only" disabled={locked} onChange={onImportFileChange} />
           </label>
-          <button onClick={() => onDeleteClub(selectedClub.id)} className="px-3 py-2 bg-red-600 text-white rounded">Delete club</button>
+          <button onClick={() => !locked && onDeleteClub(selectedClub.id)} disabled={locked} className="px-3 py-2 bg-red-600 text-white rounded disabled:cursor-not-allowed disabled:opacity-60">Delete club</button>
         </div>
 
         {/* Condensed menu on small screens (aligned right) */}
         <div className="md:hidden flex justify-end w-full">
           <SmallControlsMenu
+            locked={locked}
             onAdd={() => onShowAddPaddler(true)}
             onExportJSON={onExportJSON}
             onExportCSV={onExportCSV}
@@ -73,7 +80,7 @@ export default function PaddlersPanel({
 
       {showAddPaddler && (
         <div className="mb-4">
-          <AddPaddlerForm onSave={(p) => onAddPaddler(selectedClub.id, p)} onCancel={() => onShowAddPaddler(false)} />
+          <AddPaddlerForm onSave={(p) => { if (locked) return; onAddPaddler(selectedClub.id, p) }} onCancel={() => onShowAddPaddler(false)} />
         </div>
       )}
 
@@ -86,12 +93,14 @@ export default function PaddlersPanel({
         rowKey={'id'}
         onSave={(p) => onSavePaddler(selectedClub.id, p)}
         onDelete={(id) => onDeletePaddler(selectedClub.id, id)}
+        noEdit={locked}
+        noDelete={locked}
       />
     </>
   )
 }
 
-function SmallControlsMenu({ onAdd, onExportJSON, onExportCSV, onImport, onDelete }: { onAdd: () => void, onExportJSON: () => void, onExportCSV: () => void, onImport: (e: React.ChangeEvent<HTMLInputElement>) => void, onDelete: () => void }) {
+function SmallControlsMenu({ locked, onAdd, onExportJSON, onExportCSV, onImport, onDelete }: { locked?: boolean, onAdd: () => void, onExportJSON: () => void, onExportCSV: () => void, onImport: (e: React.ChangeEvent<HTMLInputElement>) => void, onDelete: () => void }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
@@ -168,14 +177,20 @@ function SmallControlsMenu({ onAdd, onExportJSON, onExportCSV, onImport, onDelet
     }
   }, [open])
 
+  useEffect(() => {
+    if (!locked) return
+    setOpen(false)
+  }, [locked])
+
   return (
     <div ref={menuRef} className="relative inline-block text-left">
       <button
         ref={btnRef}
+        disabled={locked}
         onClick={() => setOpen(v => !v)}
         aria-haspopup="true"
         aria-expanded={open}
-        className="inline-flex items-center justify-center w-10 h-10 rounded bg-slate-100 text-slate-700"
+        className="inline-flex items-center justify-center w-10 h-10 rounded bg-slate-100 text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
         aria-label="Open actions"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>

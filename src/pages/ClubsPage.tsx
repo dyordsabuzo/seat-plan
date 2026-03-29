@@ -5,7 +5,8 @@ import { useRegattaState } from '../context/RegattaContext'
 import { useToast } from '../context/ToastContext'
 import { PaddlersPanel as ClubPaddlersPanel } from '../features/clubs'
 import useClubs, { Club } from '../hooks/useClubs'
-import { Column, ConfirmModal, Tabs } from '../shared'
+import { usePersistentLock } from '../hooks/usePersistentLock'
+import { Column, ConfirmModal, LockToggleCard, Tabs } from '../shared'
 import { Paddler } from '../types/RegattaType'
 import { exportPaddlersCSV, exportPaddlersJSON, normalizePaddlers, parseCSVText } from '../utils/importExport'
 import RegattaSetupHome from './RegattaSetupHome'
@@ -140,6 +141,7 @@ export default function ClubsPage() {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
 
   const exportJSON = () => {
+    if (locked) return
     if (!selectedClub) return
     const blob = exportPaddlersJSON(selectedClub.paddlers)
     const url = URL.createObjectURL(blob)
@@ -153,6 +155,7 @@ export default function ClubsPage() {
   }
 
   const exportCSV = () => {
+    if (locked) return
     if (!selectedClub) return
     const blob = exportPaddlersCSV(selectedClub.paddlers, `${selectedClub.name.replace(/\s+/g, '_')}_members.csv`)
     const url = URL.createObjectURL(blob)
@@ -168,6 +171,7 @@ export default function ClubsPage() {
 //   const triggerImportClick = () => fileInputRef.current?.click()
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (locked) return
     const file = e.target.files && e.target.files[0]
     if (!file || !selectedClub) return
     const reader = new FileReader()
@@ -278,6 +282,12 @@ export default function ClubsPage() {
   ]
 
   const [activeTab, setActiveTab] = useState<'regatta' | 'paddlers'>('regatta')
+  const { locked, toggleLocked } = usePersistentLock('clubs-management-lock', false)
+
+  React.useEffect(() => {
+    if (!locked) return
+    setShowAddPaddler(false)
+  }, [locked])
 
 //   logger.debug("Rendering ClubsPage with state", { clubs, selectedClubId, activeTab })
 
@@ -290,6 +300,16 @@ export default function ClubsPage() {
         </div>
       </div>
 
+      <div className="mb-4">
+        <LockToggleCard
+          locked={locked}
+          onToggle={toggleLocked}
+          title="Clubs management lock"
+          lockedDescription="Club and paddler changes are disabled. Unlock to edit."
+          unlockedDescription="Club and paddler changes are enabled. Lock to prevent accidental edits."
+        />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <aside className="md:col-span-1 bg-white border rounded-lg p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
@@ -300,8 +320,15 @@ export default function ClubsPage() {
               placeholder="New club name"
               className="flex-1 border rounded px-3 py-2 text-sm"
               aria-label="New club name"
+              disabled={locked}
             />
-            <button onClick={() => { createClub(newClubName); setNewClubName('') }} className="px-3 py-2 bg-green-600 text-white rounded text-sm">Create</button>
+            <button
+              onClick={() => { if (locked) return; createClub(newClubName); setNewClubName('') }}
+              disabled={locked}
+              className="px-3 py-2 bg-green-600 text-white rounded text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Create
+            </button>
           </div>
 
           <div className="mb-2 text-xs text-gray-500">Clubs</div>
@@ -329,7 +356,7 @@ export default function ClubsPage() {
           <section className="md:col-span-2 bg-white border rounded-lg p-4 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <Tabs
-                items={[{ key: 'regatta', label: 'Regatta' }, { key: 'paddlers', label: 'Paddlers' }]}
+                items={[{ key: 'paddlers', label: 'Club members' }, { key: 'regatta', label: 'Regatta' }]}
                 activeKey={activeTab}
                 onChange={(k) => setActiveTab(k as 'regatta' | 'paddlers')}
               />
@@ -340,6 +367,7 @@ export default function ClubsPage() {
               <RegattaSetupHome clubId={selectedClubId} />
             ) : (
               <ClubPaddlersPanel
+                locked={locked}
                 selectedClub={selectedClub}
                 selectedPaddlers={selectedPaddlers}
                 onSelectionChange={(s) => setSelectedPaddlers(s)}
@@ -351,7 +379,11 @@ export default function ClubsPage() {
                 onExportJSON={exportJSON}
                 onExportCSV={exportCSV}
                 onImportFileChange={handleImportFile}
-                onDeleteClub={(id) => { setDeleteTarget(id); setShowConfirmDelete(true) }}
+                onDeleteClub={(id) => {
+                  if (locked) return
+                  setDeleteTarget(id)
+                  setShowConfirmDelete(true)
+                }}
                 columns={columns}
               />
             )}
@@ -365,7 +397,10 @@ export default function ClubsPage() {
         message="Are you sure you want to delete this club? This will remove all its members."
         confirmLabel="Delete"
         cancelLabel="Cancel"
-        onConfirm={() => deleteTarget && removeClub(deleteTarget)}
+        onConfirm={() => {
+          if (locked) return
+          if (deleteTarget) removeClub(deleteTarget)
+        }}
         onCancel={() => { setShowConfirmDelete(false); setDeleteTarget(null) }}
       />
       <ConfirmModal
@@ -375,6 +410,7 @@ export default function ClubsPage() {
         confirmLabel="Delete"
         cancelLabel="Cancel"
         onConfirm={async () => {
+          if (locked) return
           if (!selectedClub) return
           for (const id of selectedPaddlers) {
             // await each delete to ensure persistence order

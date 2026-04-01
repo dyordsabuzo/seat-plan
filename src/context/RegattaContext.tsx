@@ -2,16 +2,29 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 // import ConfigHelper from '../utils/ConfigHelper'
 // import {useSetupState} from './SetupContext'
 import { logger } from "../common/helpers/logger";
+import useClubs from "../hooks/useClubs";
 import useRegattas from "../hooks/useRegattas";
 import { Race, Regatta } from "../types/RegattaType";
+import { normalizeRegattaState, syncRegattaPaddlersFromClub } from "../utils/paddlerSync";
 
 export const RegattaStateContext = createContext(null)
 
 export function RegattaProvider({children}) {
-    const [state, setState] = useState<Regatta | null>(null)
+    const [state, setRawState] = useState<Regatta | null>(null)
     const [clubId, setClubId] = useState<string | null>(null)
     const lastSavedStateRef = useRef<string | null>(null)
     const { upsertRegatta } = useRegattas(clubId)
+    const { clubs } = useClubs()
+
+    const setState = useCallback((nextStateOrUpdater: any) => {
+        setRawState((previous) => {
+            const nextState = typeof nextStateOrUpdater === "function"
+                ? nextStateOrUpdater(previous)
+                : nextStateOrUpdater;
+
+            return normalizeRegattaState(nextState);
+        });
+    }, []);
 
     // const value: any = [state, setState, actions]
     useEffect(() => {
@@ -35,6 +48,18 @@ export function RegattaProvider({children}) {
         return () => window.clearTimeout(timeout)
     }, [state, upsertRegatta]);
 
+    useEffect(() => {
+        if (!state?.name || !clubId) return
+
+        const selectedClub = clubs.find((club) => String(club.id) === String(clubId))
+        if (!selectedClub) return
+
+        const synced = syncRegattaPaddlersFromClub(state, selectedClub.paddlers as any)
+        if (!synced.changed || !synced.value) return
+
+        setState(synced.value)
+    }, [clubId, clubs, state, setState])
+
     const persistState = useCallback(async (nextState = state) => {
         if (!nextState?.name) return
 
@@ -56,9 +81,9 @@ export function RegattaProvider({children}) {
                 races: nextRaces,
             }
         })
-    }, [])
+    }, [setState])
 
-    const value = useMemo(() => ({state, setState, clubId, setClubId, updateRaceConfig, persistState}), [state, clubId, persistState, updateRaceConfig])
+    const value = useMemo(() => ({state, setState, clubId, setClubId, updateRaceConfig, persistState}), [state, setState, clubId, persistState, updateRaceConfig])
 
     return (
         <RegattaStateContext.Provider value={value}>

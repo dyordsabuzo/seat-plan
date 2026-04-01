@@ -21,6 +21,10 @@ export default function ReserveSlideOutPanel({
 }: Props) {
     // Always render so the CSS transition plays correctly on close
     const fullscreen = expanded && isSmall
+    const reserveCount = reserveRows.filter((row) => {
+        const label = String(row?.name ?? row?.content ?? "").trim().toLowerCase()
+        return label.length > 0 && label !== 'empty seat'
+    }).length
 
     return (
         <>
@@ -51,7 +55,7 @@ export default function ReserveSlideOutPanel({
                     style={{ WebkitOverflowScrolling: 'touch' }}
                 >
                     <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-slate-800">Reserves</h3>
+                        <h3 className="text-sm font-semibold text-slate-800">Reserves ({reserveCount})</h3>
                         <button
                             type="button"
                             aria-label="Close reserves"
@@ -71,6 +75,7 @@ export default function ReserveSlideOutPanel({
                         id="RESERVE"
                         type="panel"
                         rows={reserveRows}
+                        reserveCount={reserveCount}
                     />
                 </div>
             </div>

@@ -1,10 +1,12 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { BoatPosition } from "../enums/BoatConstant";
 import { calculateLineBalance, calculateSideBalance } from "../utils/WeightCalculator";
 
 export const SetupStateContext = createContext({})
 
-const setDefaultSettings = () => {
+const SETUP_SETTINGS_STORAGE_KEY = "setup-settings-v1";
+
+export const setDefaultSettings = () => {
     return {
         sideWeightFactor: {
             STANDARD: [300, 330, 350, 350, 350, 350, 350, 350, 330, 300, 420],
@@ -22,15 +24,94 @@ const setDefaultSettings = () => {
     };
 }
 
+const toNumberArray = (input: unknown, fallback: number[]) => {
+    if (!Array.isArray(input)) return fallback;
+    const parsed = input
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value));
+    return parsed.length > 0 ? parsed : fallback;
+};
+
+const normaliseSettings = (candidate?: any) => {
+    const defaults = setDefaultSettings();
+    const raw = candidate ?? {};
+
+    return {
+        ...defaults,
+        ...raw,
+        sideWeightFactor: {
+            ...defaults.sideWeightFactor,
+            ...(raw.sideWeightFactor ?? {}),
+            STANDARD: toNumberArray(raw?.sideWeightFactor?.STANDARD, defaults.sideWeightFactor.STANDARD),
+            SMALL: toNumberArray(raw?.sideWeightFactor?.SMALL, defaults.sideWeightFactor.SMALL),
+        },
+        lineWeightFactor: {
+            ...defaults.lineWeightFactor,
+            ...(raw.lineWeightFactor ?? {}),
+            STANDARD: toNumberArray(raw?.lineWeightFactor?.STANDARD, defaults.lineWeightFactor.STANDARD),
+            SMALL: toNumberArray(raw?.lineWeightFactor?.SMALL, defaults.lineWeightFactor.SMALL),
+        },
+        oarWeightOffset: Number.isFinite(Number(raw.oarWeightOffset)) ? Number(raw.oarWeightOffset) : defaults.oarWeightOffset,
+        defaultDrumWeight: Number.isFinite(Number(raw.defaultDrumWeight)) ? Number(raw.defaultDrumWeight) : defaults.defaultDrumWeight,
+        defaultSweepWeight: Number.isFinite(Number(raw.defaultSweepWeight)) ? Number(raw.defaultSweepWeight) : defaults.defaultSweepWeight,
+        sideWeightTolerance: Number.isFinite(Number(raw.sideWeightTolerance)) ? Number(raw.sideWeightTolerance) : defaults.sideWeightTolerance,
+        lineWeightTolerance: Number.isFinite(Number(raw.lineWeightTolerance)) ? Number(raw.lineWeightTolerance) : defaults.lineWeightTolerance,
+    };
+};
+
+const readStoredSettings = () => {
+    try {
+        const stored = window.localStorage.getItem(SETUP_SETTINGS_STORAGE_KEY);
+        if (!stored) return setDefaultSettings();
+        return normaliseSettings(JSON.parse(stored));
+    } catch {
+        return setDefaultSettings();
+    }
+};
+
+const resolveBoatTypeKey = (boatType: string) => {
+    const normalised = String(boatType ?? "").trim().toUpperCase();
+    return normalised === "SMALL" ? "SMALL" : "STANDARD";
+};
+
 export function SetupProvider({children}) {
     const [state, setState] = useState({
-        settings: setDefaultSettings(),
+        settings: readStoredSettings(),
     })
 
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(SETUP_SETTINGS_STORAGE_KEY, JSON.stringify(state.settings));
+        } catch {
+            return;
+        }
+    }, [state.settings]);
+
+    const setSettings = useCallback((nextSettingsOrUpdater: any) => {
+        setState((previous: any) => {
+            const nextSettings = typeof nextSettingsOrUpdater === "function"
+                ? nextSettingsOrUpdater(previous.settings)
+                : nextSettingsOrUpdater;
+
+            return {
+                ...previous,
+                settings: normaliseSettings(nextSettings),
+            };
+        });
+    }, []);
+
+    const resetSettings = useCallback(() => {
+        setState((previous: any) => ({
+            ...previous,
+            settings: setDefaultSettings(),
+        }));
+    }, []);
+
     const setWeightFactor = (boatType: string) => {
+        const typeKey = resolveBoatTypeKey(boatType);
         return {
-            sideWeightFactor: state.settings?.sideWeightFactor[boatType.toUpperCase()],
-            lineWeightFactor: state.settings?.lineWeightFactor[boatType.toUpperCase()]
+            sideWeightFactor: state.settings?.sideWeightFactor?.[typeKey],
+            lineWeightFactor: state.settings?.lineWeightFactor?.[typeKey]
         }
     }
 
@@ -86,7 +167,14 @@ export function SetupProvider({children}) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state.settings]);
 
-    const value: any = { state, setState, checkBoatBalance };
+    const value: any = useMemo(() => ({
+        state,
+        setState,
+        checkBoatBalance,
+        setSettings,
+        resetSettings,
+        defaultSettings: setDefaultSettings(),
+    }), [state, checkBoatBalance, setSettings, resetSettings]);
 
     return (
         <SetupStateContext.Provider value={value}>

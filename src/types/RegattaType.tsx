@@ -1,5 +1,6 @@
 export type Race = {
     id: string,
+    paddlerIds?: string[],
     paddlers?: Paddler[],
     category: string,
     type?: string,

@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BoatPosition, BoatSize } from "../../enums/BoatConstant";
 // import {calculateLineBalance, calculateSideBalance} from "../../utils/WeightCalculator";
-import { logger } from "../../common/helpers/logger";
 import { useRegattaState } from '../../context/RegattaContext';
 import { Paddler, Race } from "../../types/RegattaType";
 import { getItems } from "../../utils/ConfigurationHelper";
@@ -37,25 +36,49 @@ export default function ConfigurationBoard({race}: Props) {
     const [selectedConfigIndex, setSelectedConfigIndex] = useState<number | null>(null)
     const [configNames, setConfigNames] = useState<string[]>(race.configs.length < 2 ? ["Config 1"] : race.configs.map((_, index) => `Config ${index + 1}`))
     const [boardSetup, setBoardSetup] = useState<any>(null)
-    const {updateRaceConfig} = useRegattaState()
+    const {state: regattaState, updateRaceConfig} = useRegattaState()
     // const {state:setup} = useSetupState();
+
+    const configCount = Array.isArray(race.configs) ? race.configs.length : 0
+
+    const racePaddlers = useMemo(() => {
+        const allPaddlers = Array.isArray(regattaState?.paddlers) ? regattaState.paddlers : []
+        const byId = new Map(allPaddlers.map((p: Paddler) => [String(p.id), p]))
+
+        const raceFromState = (regattaState?.races || []).find((item: Race) => item.id === race.id)
+        const paddlerIds = Array.isArray(raceFromState?.paddlerIds) && raceFromState.paddlerIds.length > 0
+            ? raceFromState.paddlerIds.map((id: string) => String(id))
+            : (race.paddlers || []).map((p: Paddler) => String(p.id))
+
+        const resolved = paddlerIds
+            .map((id: string) => byId.get(id))
+            .filter((paddler): paddler is Paddler => Boolean(paddler))
+
+        return resolved
+    }, [race.id, race.paddlers, regattaState?.paddlers, regattaState?.races])
 
     useEffect(() => {
         setSelectedConfigIndex(null);
-        setConfigNames(race.configs.length === 0 ? ["Config 1"] : race.configs.map((_, index) => `Config ${index + 1}`));
-        return () => {};
-    }, [race]);
+    }, [race.id]);
+
+    useEffect(() => {
+        setConfigNames(configCount === 0 ? ["Config 1"] : race.configs.map((_, index) => `Config ${index + 1}`));
+        setSelectedConfigIndex((previous) => {
+            if (previous === null) return previous;
+            if (previous < configCount) return previous;
+            return configCount > 0 ? configCount - 1 : null;
+        });
+    }, [race.id, configCount, race.configs]);
 
     const paintRaceConfig = (configIndex: number) => {
         if (race.configs.length < 1) {
-            const config = initialiseBoard(race.paddlers, race.boatType)
+            const config = initialiseBoard(racePaddlers, race.boatType)
             race.configs = [config];
         } else {
-            logger.debug("Painting existing config", boardSetup, race)
             if (boardSetup) {
                 boardSetup.map((group: Paddler[]) => {
                     return group.map((item: Paddler) => {
-                        return race.paddlers.find((p: Paddler) => p.id === item.id) || item;
+                        return racePaddlers.find((p: Paddler) => p.id === item.id) || item;
                     });
                 });
             }
@@ -64,7 +87,7 @@ export default function ConfigurationBoard({race}: Props) {
                 const config = boardSetup;
                 race.configs.push(config);
             } else {
-                let paddlers = race.paddlers;
+                let paddlers = [...racePaddlers];
                 let config = race.configs[configIndex];
                 if (typeof config === "string") {
                     config = JSON.parse(config);
@@ -90,7 +113,6 @@ export default function ConfigurationBoard({race}: Props) {
 
     useEffect(() => {
         if (selectedConfigIndex !== null) {
-            logger.debug("Selected config index changed", selectedConfigIndex, race)            
             paintRaceConfig(selectedConfigIndex);
 
             let config = race.configs[selectedConfigIndex].map(config => {
@@ -102,7 +124,7 @@ export default function ConfigurationBoard({race}: Props) {
             setBoardSetup(null);
         }
     // eslint-disable-next-line 
-    }, [selectedConfigIndex]);
+    }, [selectedConfigIndex, racePaddlers]);
 
     const exportConfigAsPDF = async (index: number | null) => {
         if (selectedConfigIndex === null || !boardRef.current) {
@@ -126,8 +148,6 @@ export default function ConfigurationBoard({race}: Props) {
             alert('Export failed. See console for details.')
         }
     }
-
-    logger.debug("Rendering RaceBoard with race", race);
 
     return (
         <div className={`flex flex-col`} ref={boardRef}>
@@ -193,7 +213,6 @@ export default function ConfigurationBoard({race}: Props) {
                         boardSetup={boardSetup}
                         updateConfig={
                             (config) => {
-                                logger.debug("Updating config", {config, selectedConfigIndex})
                                 if (selectedConfigIndex !== null) {
                                     race.configs[selectedConfigIndex] = config;
                                     updateRaceConfig(race);

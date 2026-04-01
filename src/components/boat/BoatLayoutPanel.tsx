@@ -48,6 +48,10 @@ export default function BoatLayoutPanel({
     if (!items) return null
 
     const fullscreen = isFullscreen(expanded, isSmall)
+    const reserveCount = reserveRows.filter((row) => {
+        const label = String(row?.name ?? row?.content ?? "").trim().toLowerCase()
+        return label.length > 0 && label !== 'empty seat'
+    }).length
 
     return (
         <div
@@ -66,9 +70,9 @@ export default function BoatLayoutPanel({
             {!isSmall && !reserveOpen && (
                 <div className="md:block" style={{ pointerEvents: 'auto' }}>
                     {viewOnly ? (
-                        <ReadOnlyColumn id="RESERVE" rows={reserveRows} />
+                        <ReadOnlyColumn id="RESERVE" rows={reserveRows} reserveCount={reserveCount} />
                     ) : (
-                        <SortableColumn id="RESERVE" rows={reserveRows} />
+                        <SortableColumn id="RESERVE" rows={reserveRows} reserveCount={reserveCount} />
                     )}
                 </div>
             )}

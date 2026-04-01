@@ -112,11 +112,15 @@ export function calculateSideBalance(boat: any, settings: any = {}) {
     // left sweep oar weight offset of 3kg
     value += (weightFactor[weightFactor.length - 1] / 350) * (-(settings.oarWeightOffset ?? 3));
 
+    const sideWeightTolerance = Number.isFinite(Number(settings.sideWeightTolerance))
+        ? Math.abs(Number(settings.sideWeightTolerance))
+        : 5;
+
     return {
         distribution: (value === 0 ? "Balanced" : (value > 0 ? "Right" : "Left") + " heavy"),
         value: value.toFixed(1),
-        alert: Math.abs(value) > 5,
-        weightTolerance: `minimum -5kg, maximum 5kg`,
+        alert: Math.abs(value) > sideWeightTolerance,
+        weightTolerance: `minimum -${sideWeightTolerance}kg, maximum ${sideWeightTolerance}kg`,
         totalPaddlersWeight: 0,
         totalLoadWeight: 0,
         averagePaddlerWeight: 0,
@@ -154,12 +158,16 @@ export function calculateLineBalance(boat: any, settings: any = {}) {
     const sweepWeight = defaultSweepWeight + (parseInt(boat[BoatPosition.SWEEP][0]?.weight) ?? 0)
     value += (weightFactor[weightFactor.length - 1] / 6) * (sweepWeight);
 
-    // positive is front heavy, alert if > 15 or < -25
+    const lineWeightTolerance = Number.isFinite(Number(settings.lineWeightTolerance))
+        ? Math.abs(Number(settings.lineWeightTolerance))
+        : 10;
+
+    // positive is front heavy
     return {
         distribution: (value === 0 ? "Balanced" : (value > 0 ? "Front" : "Back") + " heavy"),
         value: value.toFixed(1),
-        alert: value > 15 || value < -25,
-        weightTolerance: `minimum -25kg, maximum 15kg`,
+        alert: Math.abs(value) > lineWeightTolerance,
+        weightTolerance: `minimum -${lineWeightTolerance}kg, maximum ${lineWeightTolerance}kg`,
         totalPaddlersWeight: 0,
         totalLoadWeight: 0,
         averagePaddlerWeight: 0,

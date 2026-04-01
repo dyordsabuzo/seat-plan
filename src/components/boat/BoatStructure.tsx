@@ -2,7 +2,6 @@ import { defaultPreset, KeyboardSensor, PointerSensor } from '@dnd-kit/dom';
 import { move } from "@dnd-kit/helpers";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { logger } from "../../common/helpers/logger";
 import { useSetupState } from "../../context/SetupContext";
 import { BoatPosition } from "../../enums/BoatConstant";
 import { areItemsEqual, createItemsByPosition, getRowsByIds } from "../../features/boat/utils/boatStructure";
@@ -79,7 +78,6 @@ export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, up
     // ── parsed setup ───────────────────────────────────────────────────────────
     const parsedBoardSetup = useMemo(() => {
         if (typeof boardSetup === "string") {
-            logger.debug("Parsing boardSetup string", boardSetup)
             return JSON.parse(boardSetup)
         }
         return boardSetup
@@ -117,6 +115,11 @@ export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, up
     // checkBoatBalance is stable per useCallback in SetupContext — safe dependency
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [parsedBoardSetup, boatType])
+
+    useEffect(() => {
+        if (!parsedBoardSetup) return
+        checkBoatBalance(parsedBoardSetup, boatType)
+    }, [parsedBoardSetup, boatType, checkBoatBalance, state.settings])
 
     // Propagate item changes back to the config
     useEffect(() => {
@@ -227,8 +230,6 @@ export const BoatStructure = ({ race, boatType, boardSetup, viewOnly = false, up
         () => getRowsByIds(items[BoatPosition.SWEEP], paddlersById, (_id, i) => ({ id: `${BoatPosition.SWEEP}-${i}`, name: "" })),
         [items, paddlersById],
     )
-
-    logger.debug("Rendering BoatStructure", { boardSetup: parsedBoardSetup, items, paddlers, race })
 
     // ── render ─────────────────────────────────────────────────────────────────
     return (

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { logger } from "../common/helpers/logger";
+import SetupBoardSettingsModal from "../components/complex/modals/SetupBoardSettingsModal";
 import { BoardViewProvider } from "../context/BoardViewContext";
 import { useRegattaState } from "../context/RegattaContext";
+import { useSetupState } from "../context/SetupContext";
 import { RaceBoard } from "../features/regatta";
 import { ActionButton, Container, SelectableSidebarItem } from "../shared";
 import { Race } from "../types/RegattaType";
@@ -56,7 +58,9 @@ const mapConfigForTargetRace = (config: any, targetRace: Race) => {
 
 export default function RegattaSetupBoard() {
     const { state: regatta, setState: setRegatta, persistState } = useRegattaState();
+    const { state: setupState, setSettings, resetSettings } = useSetupState() as any;
     const [selection, setSelection] = useState<string | null>(null);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [racePanelOpen, setRacePanelOpen] = useState(false);
     const [exportPanelOpen, setExportPanelOpen] = useState(false);
     const [exportTargetRaceId, setExportTargetRaceId] = useState<string>("");
@@ -195,11 +199,24 @@ export default function RegattaSetupBoard() {
     return (
         <Container className="py-6">
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-semibold">Setup Board</h1>
-                    <p className="text-sm text-gray-600">
-                        Select a race and manage its seating configurations.
-                    </p>
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <h1 className="text-2xl font-semibold">Setup Board</h1>
+                        <p className="text-sm text-gray-600">
+                            Select a race and manage its seating configurations.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setSettingsOpen(true)}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                        aria-label="Open setup settings"
+                        title="Setup settings"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+                            <path fillRule="evenodd" d="M7.84 1.804a1 1 0 01.974-.604h2.372a1 1 0 01.974.604l.4 1.001a6.97 6.97 0 011.455.843l1.06-.354a1 1 0 011.18.442l1.186 2.054a1 1 0 01-.206 1.244l-.816.7a7.14 7.14 0 010 1.686l.816.7a1 1 0 01.206 1.244l-1.186 2.054a1 1 0 01-1.18.442l-1.06-.354a6.97 6.97 0 01-1.455.843l-.4 1.001a1 1 0 01-.974.604H8.814a1 1 0 01-.974-.604l-.4-1.001a6.97 6.97 0 01-1.455-.843l-1.06.354a1 1 0 01-1.18-.442L2.159 13.66a1 1 0 01.206-1.244l.816-.7a7.14 7.14 0 010-1.686l-.816-.7a1 1 0 01-.206-1.244L3.345 6.03a1 1 0 011.18-.442l1.06.354c.444-.34.93-.625 1.455-.843l.4-1.001zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                        </svg>
+                    </button>
                 </div>
 
                 {races.length === 0 ? (
@@ -447,6 +464,14 @@ export default function RegattaSetupBoard() {
                     </div>
                     </>
                 )}
+
+                <SetupBoardSettingsModal
+                    open={settingsOpen}
+                    settings={setupState?.settings}
+                    onClose={() => setSettingsOpen(false)}
+                    onSave={(nextSettings) => setSettings(nextSettings)}
+                    onReset={resetSettings}
+                />
             </div>
         </Container>
     );

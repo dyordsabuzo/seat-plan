@@ -23,6 +23,15 @@ const getRaceLabel = (race: Race, index: number) => {
     return parts.length ? parts.join(' • ') : `Race ${index + 1}`;
 }
 
+const getRacePaddlerIds = (race: Race): string[] => {
+    if (Array.isArray(race.paddlerIds) && race.paddlerIds.length > 0) {
+        return race.paddlerIds.map((id) => String(id));
+    }
+
+    if (!Array.isArray(race.paddlers)) return [];
+    return race.paddlers.map((paddler) => String(paddler.id));
+}
+
 const PaddlersPanel: React.FC<Props> = ({ locked = false }) => {
     const { state: regatta, setState: setRegatta, clubId } = useRegattaState()
     const { options } = useOptions()
@@ -88,29 +97,27 @@ const PaddlersPanel: React.FC<Props> = ({ locked = false }) => {
     const handleSave = useCallback((row: Paddler) => {
         if (locked) return
         const nextPaddlers = (regatta?.paddlers || []).map(p => p.id === row.id ? {...p, ...row} : p)
-        const nextRaces = races.map(r => ({...r, paddlers: (r.paddlers || []).map((p: Paddler) => p.id === row.id ? {...p, ...row} : p)}))
-        setRegatta(prev => ({...prev, paddlers: nextPaddlers, races: nextRaces}))
-    }, [locked, regatta?.paddlers, races, setRegatta])
+        setRegatta(prev => ({...prev, paddlers: nextPaddlers}))
+    }, [locked, regatta?.paddlers, setRegatta])
 
     const deletePaddler = useCallback((id: string) => {
         if (locked) return
         const remaining = (regatta?.paddlers || []).filter(p => p.id !== id)
-        const nextRaces = races.map(r => ({...r, paddlers: (r.paddlers || []).filter((p: Paddler) => p.id !== id)}))
-        setRegatta(prev => ({...prev, paddlers: remaining, races: nextRaces}))
-    }, [locked, regatta?.paddlers, races, setRegatta])
+        setRegatta(prev => ({...prev, paddlers: remaining}))
+    }, [locked, regatta?.paddlers, setRegatta])
 
     const toggleAllocation = useCallback((paddlerId: string, raceId: string, checked: boolean) => {
         if (locked) return
         const nextRaces = races.map(r => {
             if (r.id !== raceId) return r
-            const existing = r.paddlers || []
+            const existingIds = new Set(getRacePaddlerIds(r))
             if (checked) {
                 const p = (regatta?.paddlers || []).find(pp => pp.id === paddlerId)
                 if (!p) return r
-                if (existing.find((e: Paddler) => e.id === paddlerId)) return r
-                return {...r, paddlers: [...existing, p]}
+                if (existingIds.has(String(paddlerId))) return r
+                return {...r, paddlerIds: [...Array.from(existingIds), String(paddlerId)]}
             } else {
-                return {...r, paddlers: existing.filter((e: Paddler) => e.id !== paddlerId)}
+                return {...r, paddlerIds: Array.from(existingIds).filter((id) => id !== String(paddlerId))}
             }
         })
         logger.debug('Toggling allocation for paddler', paddlerId, nextRaces)
@@ -168,9 +175,13 @@ const PaddlersPanel: React.FC<Props> = ({ locked = false }) => {
         const existing = Array.isArray(regatta?.paddlers) ? regatta.paddlers : []
         const nextMap = new Map(existing.map((p) => [String(p.id), p]))
         selected.forEach((p) => {
-            if (!nextMap.has(String(p.id))) {
-                nextMap.set(String(p.id), p as Paddler)
-            }
+            const id = String(p.id)
+            const previous = nextMap.get(id)
+            nextMap.set(id, {
+                ...((previous as object) || {}),
+                ...(p as Paddler),
+                id,
+            })
         })
 
         const nextPaddlers = Array.from(nextMap.values())
@@ -192,25 +203,46 @@ const PaddlersPanel: React.FC<Props> = ({ locked = false }) => {
         }
 
         const sourcePaddlers = Array.isArray(regatta?.paddlers) ? regatta.paddlers : []
-        const sourceById = new Map(sourcePaddlers.map((p) => [String(p.id), p]))
+        const sourceIds = sourcePaddlers.map((p) => String(p.id))
         const nextRaces = races.map((race) => {
             if (race.id !== focusedRaceId) return race
 
             if (!assignAll) {
-                return { ...race, paddlers: [] }
+                return { ...race, paddlerIds: [] }
             }
 
-            const nextPaddlers = sourcePaddlers
-                .map((p) => sourceById.get(String(p.id)) || p)
-                .filter(Boolean)
-
-            return { ...race, paddlers: nextPaddlers }
+            return { ...race, paddlerIds: sourceIds }
         })
 
         setRegatta((prev) => ({ ...prev, races: nextRaces }))
         setActionError(null)
         setActionSuccess(assignAll ? 'Allocated all paddlers to focused race.' : 'Cleared all paddlers from focused race.')
     }, [focusedRaceId, locked, races, regatta?.paddlers, setRegatta])
+
+    const applyRaceAllocation = useCallback((raceId: string, assignAll: boolean) => {
+        if (locked) {
+            setActionError('Regatta management is locked. Unlock to modify allocations.')
+            return
+        }
+
+        const sourcePaddlers = Array.isArray(regatta?.paddlers) ? regatta.paddlers : []
+        const sourceIds = sourcePaddlers.map((p) => String(p.id))
+
+        const nextRaces = races.map((race) => {
+            if (race.id !== raceId) return race
+            return {
+                ...race,
+                paddlerIds: assignAll ? sourceIds : [],
+            }
+        })
+
+        setRegatta((prev) => ({ ...prev, races: nextRaces }))
+        setActionError(null)
+
+        const raceIndex = races.findIndex((race) => race.id === raceId)
+        const raceLabel = raceIndex >= 0 ? getRaceLabel(races[raceIndex], raceIndex) : 'race'
+        setActionSuccess(assignAll ? `Selected all paddlers for ${raceLabel}.` : `Cleared all paddlers from ${raceLabel}.`)
+    }, [locked, races, regatta?.paddlers, setRegatta])
 
     const baseColumns = useMemo(() => (
         [
@@ -229,7 +261,7 @@ const PaddlersPanel: React.FC<Props> = ({ locked = false }) => {
             title: getRaceLabel(race, races.findIndex((item) => item.id === race.id)),
             hideOnEdit: true,
             render: (row: Paddler) => {
-                const allocated = (race.paddlers || []).some((p) => p.id === row.id)
+                const allocated = getRacePaddlerIds(race).includes(String(row.id))
                 return (
                     <input
                         type="checkbox"
@@ -248,7 +280,7 @@ const PaddlersPanel: React.FC<Props> = ({ locked = false }) => {
         title: 'Total Races',
         hideOnEdit: true,
         render: (row: Paddler) => {
-            const count = races.reduce((acc, race) => acc + ((race.paddlers || []).some((p: Paddler) => p.id === row.id) ? 1 : 0), 0)
+            const count = races.reduce((acc, race) => acc + (getRacePaddlerIds(race).includes(String(row.id)) ? 1 : 0), 0)
             return (<span className={`text-sm`}>{count}</span>)
         }
     } as Column<Paddler>), [races])
@@ -341,6 +373,39 @@ const PaddlersPanel: React.FC<Props> = ({ locked = false }) => {
                         {raceColumnMode === 'focused' && focusedRace ? ` • ${getRaceLabel(focusedRace, races.findIndex((item) => item.id === focusedRace.id))}` : ''}
                     </div>
                 </div>
+
+                {visibleRaces.length > 0 && (
+                    <div className="mt-3 rounded-md border border-slate-200 bg-white p-2.5">
+                        <div className="mb-2 text-xs font-medium text-slate-700">Quick race actions</div>
+                        <div className="flex flex-wrap gap-2">
+                            {visibleRaces.map((race) => {
+                                const raceIndex = races.findIndex((item) => item.id === race.id)
+                                const raceLabel = getRaceLabel(race, raceIndex)
+                                return (
+                                    <div key={`race-action-${race.id}`} className="inline-flex items-center gap-1.5 rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                                        <span className="max-w-[220px] truncate text-[11px] text-slate-600" title={raceLabel}>{raceLabel}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => applyRaceAllocation(race.id, true)}
+                                            disabled={locked}
+                                            className="rounded bg-emerald-600 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            Select all
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => applyRaceAllocation(race.id, false)}
+                                            disabled={locked}
+                                            className="rounded bg-slate-500 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {(actionError || actionSuccess) && (

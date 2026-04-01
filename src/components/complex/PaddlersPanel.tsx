@@ -13,29 +13,35 @@ const PaddlersPanel: React.FC = () => {
 
     const filtered: Paddler[] = regatta?.paddlers || []
 
+    const getRacePaddlerIds = (race: Race): string[] => {
+        if (Array.isArray(race.paddlerIds) && race.paddlerIds.length > 0) {
+            return race.paddlerIds.map((id) => String(id))
+        }
+        if (!Array.isArray(race.paddlers)) return []
+        return race.paddlers.map((p) => String(p.id))
+    }
+
     const handleSave = (row: Paddler) => {
         const nextPaddlers = (regatta.paddlers || []).map(p => p.id === row.id ? {...p, ...row} : p)
-        const nextRaces = (regatta.races || []).map(r => ({...r, paddlers: (r.paddlers || []).map((p: Paddler) => p.id === row.id ? {...p, ...row} : p)}))
-        setRegatta(prev => ({...prev, paddlers: nextPaddlers, races: nextRaces}))
+        setRegatta(prev => ({...prev, paddlers: nextPaddlers}))
     }
 
     const deletePaddler = (id: string) => {
         const remaining = (regatta.paddlers || []).filter(p => p.id !== id)
-        const nextRaces = (regatta.races || []).map(r => ({...r, paddlers: (r.paddlers || []).filter((p: Paddler) => p.id !== id)}))
-        setRegatta(prev => ({...prev, paddlers: remaining, races: nextRaces}))
+        setRegatta(prev => ({...prev, paddlers: remaining}))
     }
 
     const toggleAllocation = (paddlerId: string, raceId: string, checked: boolean) => {
         const nextRaces = (regatta.races || []).map(r => {
             if (r.id !== raceId) return r
-            const existing = r.paddlers || []
+            const existingIds = new Set(getRacePaddlerIds(r))
             if (checked) {
                 const p = (regatta.paddlers || []).find(pp => pp.id === paddlerId)
                 if (!p) return r
-                if (existing.find((e: Paddler) => e.id === paddlerId)) return r
-                return {...r, paddlers: [...existing, p]}
+                if (existingIds.has(String(paddlerId))) return r
+                return {...r, paddlerIds: [...Array.from(existingIds), String(paddlerId)]}
             } else {
-                return {...r, paddlers: existing.filter((e: Paddler) => e.id !== paddlerId)}
+                return {...r, paddlerIds: Array.from(existingIds).filter((id) => id !== String(paddlerId))}
             }
         })
         logger.debug("Toggling allocation for paddler", paddlerId, nextRaces)
@@ -100,14 +106,14 @@ const PaddlersPanel: React.FC = () => {
                         title: `${race.category}-${race.type}-${race.distance}-${race.boatType}`,
                         hideOnEdit: true, 
                         render: (row: Paddler) => {
-                            const allocated = (race.paddlers || []).some(p => p.id === row.id)
+                            const allocated = getRacePaddlerIds(race).includes(String(row.id))
                             return (
                                 <input type="checkbox" checked={allocated} onChange={(e) => toggleAllocation(row.id, race.id, e.target.checked)} />
                             )
                         }
                     }) as Column<Paddler>))
                     .concat({key: 'totalRaces', title: 'Total Races', hideOnEdit: true, render: (row: Paddler) => {
-                        const count = (regatta.races || []).reduce((acc, r) => acc + ((r.paddlers || []).some((p: Paddler) => p.id === row.id) ? 1 : 0), 0)
+                        const count = (regatta.races || []).reduce((acc, r) => acc + (getRacePaddlerIds(r).includes(String(row.id)) ? 1 : 0), 0)
                         return (<span className={`text-sm`}>{count}</span>)
                     }})
                 }

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { logger } from '../common/helpers/logger'
 import { BoardViewProvider } from '../context/BoardViewContext'
 import { useRegattaState } from '../context/RegattaContext'
 import { BoatSize } from '../enums/BoatConstant'
@@ -26,10 +25,25 @@ export default function AllRaceConfigs() {
   // prepare configs for rendering
   const prepared = useMemo(() => {
     const races = regatta?.races ?? []
+    const allPaddlers = Array.isArray(regatta?.paddlers) ? regatta.paddlers : []
+    const paddlersById = new Map(allPaddlers.map((p: any) => [String(p.id), p]))
+
     return races.map(race => {
+      const paddlerPool = (() => {
+        const ids = Array.isArray(race.paddlerIds) && race.paddlerIds.length > 0
+          ? race.paddlerIds.map((id: string) => String(id))
+          : (race.paddlers || []).map((p: any) => String(p.id))
+
+        const resolved = ids
+          .map((id: string) => paddlersById.get(id))
+          .filter((p: any) => Boolean(p))
+
+        return resolved.length > 0 ? resolved : (race.paddlers || [])
+      })()
+
       const rawConfigs = (race.configs && race.configs.length > 0)
         ? race.configs.map((c: any) => (typeof c === 'string' ? JSON.parse(c) : c))
-        : [initialiseBoard(race.paddlers || [], race.boatType || 'STANDARD')]
+        : [initialiseBoard(paddlerPool || [], race.boatType || 'STANDARD')]
 
       // Normalize each config so every seat is an object {id, name}
       const configs = rawConfigs.map((cfg: any) => {
@@ -42,12 +56,12 @@ export default function AllRaceConfigs() {
               return { id: `empty-${groupIndex}-${idx}-${Date.now()}`, name: '' }
             }
             if (typeof item === 'string' || typeof item === 'number') {
-              const found = (race.paddlers || []).find((p: any) => String(p.id) === String(item))
+              const found = (paddlerPool || []).find((p: any) => String(p.id) === String(item))
               return found ? found : { id: String(item), name: '' }
             }
             // item is object
             const id = item.id ?? item.content ?? `${groupIndex}-${idx}-${Date.now()}`
-            const found = (race.paddlers || []).find((p: any) => String(p.id) === String(id))
+            const found = (paddlerPool || []).find((p: any) => String(p.id) === String(id))
             return found ? found : { id: id, name: item.name ?? item.content ?? '' }
           })
         })
@@ -56,8 +70,6 @@ export default function AllRaceConfigs() {
       return { race, configs }
     })
   }, [regatta])
-
-  logger.debug("Prepared configs for regatta", {regatta}, prepared);
 
   if (!regatta) {
     return (

@@ -42,11 +42,13 @@ function ColumnShell({
   id,
   isDropTarget = false,
   isScrollable = false,
+  reserveCount,
   children,
 }: {
   id: string;
   isDropTarget?: boolean;
   isScrollable?: boolean;
+  reserveCount?: number;
   children: React.ReactNode;
 }) {
   return (
@@ -61,7 +63,10 @@ function ColumnShell({
       style={isScrollable ? { touchAction: 'pan-y', pointerEvents: 'auto' } : undefined}
     >
       {id.startsWith('RESERVE') && (
-        <h2 className="text-xs font-semibold px-1 pt-1 text-slate-600">Reserves</h2>
+        <div className="px-1 pt-1 pb-0.5 flex items-center justify-between">
+          <h2 className="text-xs font-semibold text-slate-600">Reserves</h2>
+          <span className="text-[11px] font-medium text-slate-500">{reserveCount ?? 0}</span>
+        </div>
       )}
       {children}
     </div>
@@ -72,6 +77,7 @@ export function SortableColumn(props: {
   id: string;
   type?: string;
   rows?: {id: string; name?: string}[];
+  reserveCount?: number;
   hideXButton?: boolean;
   removeItem?: (columnId: string, itemId: string) => void;
 }) {
@@ -89,7 +95,7 @@ export function SortableColumn(props: {
 
   return (
     <div ref={ref}>
-      <ColumnShell id={props.id} isDropTarget={isDropTarget} isScrollable={props.id.startsWith('RESERVE')}>
+      <ColumnShell id={props.id} isDropTarget={isDropTarget} isScrollable={props.id.startsWith('RESERVE')} reserveCount={props.reserveCount}>
         <div className="flex flex-col gap-1">
           {props.rows?.map((item, itemIndex) => (
             <SortableItem
@@ -110,9 +116,10 @@ export function SortableColumn(props: {
 export function ReadOnlyColumn(props: {
   id: string;
   rows?: {id: string; name?: string}[];
+  reserveCount?: number;
 }) {
   return (
-    <ColumnShell id={props.id} isScrollable={props.id.startsWith('RESERVE')}>
+    <ColumnShell id={props.id} isScrollable={props.id.startsWith('RESERVE')} reserveCount={props.reserveCount}>
       <div className="flex flex-col gap-1">
         {props.rows?.map((item, itemIndex) => (
           <div

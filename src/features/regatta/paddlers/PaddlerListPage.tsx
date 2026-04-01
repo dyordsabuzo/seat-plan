@@ -44,9 +44,7 @@ export default function PaddlerListPage() {
     return [];
   };
 
-  const [paddlersDisplayed, setPaddlersDisplayed] = useState<Paddler[]>(() => {
-    return getRegattaPaddlers(regatta);
-  });
+  const paddlersDisplayed = useMemo(() => getRegattaPaddlers(regatta), [regatta]);
 
   useEffect(() => {
     if (regatta?.name) return;
@@ -60,10 +58,6 @@ export default function PaddlerListPage() {
       },
     });
   }, [navigate, regatta?.name]);
-
-  useEffect(() => {
-    setPaddlersDisplayed(getRegattaPaddlers(regatta));
-  }, [regatta]);
 
   const filtered = useMemo(() => {
     if (!search) return paddlersDisplayed;
@@ -127,13 +121,16 @@ export default function PaddlerListPage() {
 
     const existingMap = new Map<string, Paddler>(paddlersDisplayed.map(p => [String(p.id), p]));
     selected.forEach(p => {
-      if (!existingMap.has(String(p.id))) {
-        existingMap.set(String(p.id), p);
-      }
+      const id = String(p.id);
+      const previous = existingMap.get(id);
+      existingMap.set(id, {
+        ...(previous || {}),
+        ...p,
+        id,
+      });
     });
 
     const next = Array.from(existingMap.values());
-    setPaddlersDisplayed(next);
     try {
       setRegatta(prev => ({ ...(prev || {}), paddlers: next }));
     } catch (e) {
@@ -199,7 +196,6 @@ export default function PaddlerListPage() {
       console.debug('could not update regatta paddlers', e);
     }
 
-    setPaddlersDisplayed(remaining);
     if (state.configTree) {
       const currentMap: any = {};
       remaining.forEach(r => currentMap[r.id] = r);
@@ -223,8 +219,6 @@ export default function PaddlerListPage() {
     } catch (e) {
       console.debug('could not set regatta paddlers', e);
     }
-    setPaddlersDisplayed(next);
-
     const paddlersMap: any = {};
     next.forEach(p => {
       paddlersMap[p.id] = p;
@@ -240,8 +234,12 @@ export default function PaddlerListPage() {
   };
 
   const clearAll = () => {
-    setPaddlersDisplayed([]);
     setFileName(null);
+    try {
+      setRegatta(prev => ({ ...(prev || {}), paddlers: [] }));
+    } catch (e) {
+      console.debug('could not clear regatta paddlers', e);
+    }
     setState(prev => ({ ...prev, paddlers: [] }));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
